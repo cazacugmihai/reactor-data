@@ -43,7 +43,7 @@ class ComposableRepositorySpec extends Specification {
 
 		when: "an entity is saved"
 		def start = System.currentTimeMillis()
-		def entity = people.save(Composable.from(new Person(id: 1, name: "John Doe")))
+		def entity = people.save(Composable.from(new Person(id: 1, name: "John Doe")).build())
 		entity.await(1, TimeUnit.SECONDS)
 
 		then: "entity has saved without timing out"
