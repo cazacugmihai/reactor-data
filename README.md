@@ -2,6 +2,8 @@
 
 This is an early draft of enabling Reactor's Composable to provide asynchronous data access even if the underlying datastore access is fully-blocking.
 
+[![Build Status](https://drone.io/github.com/reactor/reactor-data/status.png)](https://drone.io/github.com/reactor/reactor-data/latest)
+
 ### Spring Data Repositories
 
 This submodule provides an interface similar to Spring Data's [CrudRepository](http://static.springsource.org/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html) but replaces references to domain objects with references to `Composable<DomainObject>`. This gives you a chainable, composable data API that doesn't block the caller while waiting on data (it uses a background IO thread instead).
