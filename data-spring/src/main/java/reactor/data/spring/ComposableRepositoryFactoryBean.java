@@ -10,8 +10,6 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.support.Repositories;
 import org.springframework.util.ReflectionUtils;
-import reactor.Fn;
-import reactor.core.Composable;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -140,9 +138,9 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 					if (null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
 						if (result instanceof Iterable) {
-							return R.compose((Iterable) result);
+							return reactor.core.R.compose((Iterable) result);
 						} else {
-							return R.compose(result);
+							return reactor.core.R.compose(result);
 						}
 					}
 				}
