@@ -44,7 +44,7 @@ class ComposableRepositorySpec extends Specification {
 
 		when: "an entity is saved"
 		def start = System.currentTimeMillis()
-		def entity = people.save(Fn.compose(new Person(id: 1, name: "John Doe")).get())
+		def entity = people.save(R.compose(new Person(id: 1, name: "John Doe")).sync().get())
 		entity.await(1, TimeUnit.SECONDS)
 
 		then: "entity has saved without timing out"
@@ -57,7 +57,7 @@ class ComposableRepositorySpec extends Specification {
 		} as Function<Person, String>)
 
 		then: "entity should have a name property"
-		name.await(1, TimeUnit.SECONDS) == "John Doe"
+		name.await(5, TimeUnit.SECONDS) == "John Doe"
 
 		when: "a finder method is called"
 		entity = people.findByName("John Doe")

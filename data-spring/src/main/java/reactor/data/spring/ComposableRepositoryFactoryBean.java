@@ -140,9 +140,9 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 					if (null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
 						if (result instanceof Iterable) {
-							return Fn.compose((Iterable) result);
+							return R.compose((Iterable) result);
 						} else {
-							return Fn.compose(result);
+							return R.compose(result);
 						}
 					}
 				}

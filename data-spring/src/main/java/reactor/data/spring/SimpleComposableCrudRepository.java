@@ -15,7 +15,7 @@ import java.io.Serializable;
  */
 class SimpleComposableCrudRepository<T, ID extends Serializable> implements ComposableCrudRepository<T, ID> {
 
-	private final Reactor reactor = new Reactor();
+	private final Reactor reactor = R.reactor().sync().get();
 	private final CrudRepository<T, ID> delegateRepository;
 
 	SimpleComposableCrudRepository(CrudRepository<T, ID> delegateRepository) {
@@ -37,7 +37,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 
 	@Override
 	public Composable<T> findOne(ID id) {
-		return Fn.compose(id)
+		return R.compose(id)
 										 .using(reactor.getDispatcher())
 										 .get()
 										 .map(new Function<ID, T>() {
@@ -50,7 +50,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 
 	@Override
 	public Composable<Boolean> exists(ID id) {
-		return Fn.compose(id)
+		return R.compose(id)
 										 .using(reactor.getDispatcher())
 										 .get()
 										 .map(new Function<ID, Boolean>() {
@@ -103,7 +103,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 
 	@Override
 	public Composable<Void> delete(ID id) {
-		return Fn.compose(id)
+		return R.compose(id)
 										 .using(reactor.getDispatcher())
 										 .get()
 										 .map(new Function<ID, Void>() {
