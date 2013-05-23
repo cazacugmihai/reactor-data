@@ -21,6 +21,7 @@ import static org.springframework.util.ReflectionUtils.doWithMethods;
 
 /**
  * @author Jon Brisbin
+ * @author Stephane Maldini
  */
 public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<T, ID>, T, ID extends Serializable>
 		implements FactoryBean<R>,
@@ -138,9 +139,9 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 					if (null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
 						if (result instanceof Iterable) {
-							return reactor.core.R.compose((Iterable) result);
+							return reactor.core.R.compose((Iterable) result).get();
 						} else {
-							return reactor.core.R.compose(result);
+							return reactor.core.R.compose(result).get();
 						}
 					}
 				}

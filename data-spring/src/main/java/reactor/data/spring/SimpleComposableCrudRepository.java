@@ -12,10 +12,11 @@ import java.io.Serializable;
 
 /**
  * @author Jon Brisbin
+ * @author Stephane Maldini
  */
 class SimpleComposableCrudRepository<T, ID extends Serializable> implements ComposableCrudRepository<T, ID> {
 
-	private final Reactor reactor = R.reactor().sync().get();
+	private final Reactor reactor = R.reactor().get();
 	private final CrudRepository<T, ID> delegateRepository;
 
 	SimpleComposableCrudRepository(CrudRepository<T, ID> delegateRepository) {
@@ -25,14 +26,12 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 
 	public <S extends T> Composable<S> save(Composable<S> entities) {
-		final Composable<S> c = new Composable<S>(reactor);
-		entities.consume(new Consumer<S>() {
+		return entities.map(new Function<S,S>(){
 			@Override
-			public void accept(S entity) {
-				c.accept(delegateRepository.save(entity));
+			public S apply(S entity) {
+				return delegateRepository.save(entity);
 			}
 		});
-		return c;
 	}
 
 	@Override

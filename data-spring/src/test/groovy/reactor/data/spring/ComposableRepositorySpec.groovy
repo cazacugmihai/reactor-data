@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories
 import reactor.Fn
 import reactor.core.Composable
+import reactor.core.R
 import reactor.data.spring.config.EnableComposableRepositories
 import reactor.data.spring.test.ComposablePersonRepository
 import reactor.data.spring.test.Person
@@ -45,7 +46,7 @@ class ComposableRepositorySpec extends Specification {
 		when: "an entity is saved"
 		def start = System.currentTimeMillis()
 		def entity = people.save(R.compose(new Person(id: 1, name: "John Doe")).sync().get())
-		entity.await(1, TimeUnit.SECONDS)
+		entity.await(5, TimeUnit.SECONDS)
 
 		then: "entity has saved without timing out"
 		System.currentTimeMillis() - start < 5000
