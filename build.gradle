@@ -91,6 +91,14 @@ subprojects { subproject ->
 		from groovydoc
 	}
 
+
+	test {
+		testLogging {
+			events "failed"
+			exceptionFormat "full"
+		}
+	}
+
 	artifacts {
 		archives sourcesJar
 		archives groovydocJar
