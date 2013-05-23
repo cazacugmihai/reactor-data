@@ -1,6 +1,7 @@
 package reactor.data.spring;
 
 import org.springframework.data.repository.CrudRepository;
+import reactor.Fn;
 import reactor.core.Composable;
 import reactor.core.R;
 import reactor.core.Reactor;
@@ -36,9 +37,9 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 
 	@Override
 	public Composable<T> findOne(ID id) {
-		return Composable.from(id)
+		return Fn.compose(id)
 										 .using(reactor.getDispatcher())
-										 .build()
+										 .get()
 										 .map(new Function<ID, T>() {
 											 @Override
 											 public T apply(ID id) {
@@ -49,9 +50,9 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 
 	@Override
 	public Composable<Boolean> exists(ID id) {
-		return Composable.from(id)
+		return Fn.compose(id)
 										 .using(reactor.getDispatcher())
-										 .build()
+										 .get()
 										 .map(new Function<ID, Boolean>() {
 											 @Override
 											 public Boolean apply(ID id) {
@@ -71,7 +72,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 				}
 			}
 		};
-		R.schedule(consumer, null, reactor);
+		Fn.schedule(consumer, null, reactor);
 		return c;
 	}
 
@@ -96,15 +97,15 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 				c.accept(delegateRepository.count());
 			}
 		};
-		R.schedule(consumer, null, reactor);
+		Fn.schedule(consumer, null, reactor);
 		return c;
 	}
 
 	@Override
 	public Composable<Void> delete(ID id) {
-		return Composable.from(id)
+		return Fn.compose(id)
 										 .using(reactor.getDispatcher())
-										 .build()
+										 .get()
 										 .map(new Function<ID, Void>() {
 											 @Override
 											 public Void apply(ID id) {
@@ -138,7 +139,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 				c.accept((Void) null);
 			}
 		};
-		R.schedule(consumer, null, reactor);
+		Fn.schedule(consumer, null, reactor);
 		return c;
 	}
 
