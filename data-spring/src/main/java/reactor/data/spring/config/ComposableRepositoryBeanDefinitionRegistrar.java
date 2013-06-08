@@ -11,8 +11,8 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.util.ClassUtils;
-import reactor.data.spring.ComposableRepository;
-import reactor.data.spring.ComposableRepositoryFactoryBean;
+import reactor.data.spring.StreamRepository;
+import reactor.data.spring.StreamRepositoryFactoryBean;
 
 import java.util.Map;
 
@@ -42,7 +42,7 @@ public class ComposableRepositoryBeanDefinitionRegistrar
 				return beanDefinition.getMetadata().isIndependent();
 			}
 		};
-		provider.addIncludeFilter(new AssignableTypeFilter(ComposableRepository.class));
+		provider.addIncludeFilter(new AssignableTypeFilter(StreamRepository.class));
 		provider.setResourceLoader(resourceLoader);
 
 		String[] basePackages = (String[]) attrs.get("basePackages");
@@ -57,7 +57,7 @@ public class ComposableRepositoryBeanDefinitionRegistrar
 
 		for (String basePackage : basePackages) {
 			for (BeanDefinition beanDef : provider.findCandidateComponents(basePackage)) {
-				BeanDefinitionBuilder factoryBeanDef = BeanDefinitionBuilder.rootBeanDefinition(ComposableRepositoryFactoryBean.class.getName());
+				BeanDefinitionBuilder factoryBeanDef = BeanDefinitionBuilder.rootBeanDefinition(StreamRepositoryFactoryBean.class.getName());
 				factoryBeanDef.addConstructorArgValue(ClassUtils.resolveClassName(beanDef.getBeanClassName(), classLoader));
 
 				registry.registerBeanDefinition(beanDef.getBeanClassName(), factoryBeanDef.getBeanDefinition());

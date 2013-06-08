@@ -23,7 +23,7 @@ import static org.springframework.util.ReflectionUtils.doWithMethods;
  * @author Jon Brisbin
  * @author Stephane Maldini
  */
-public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<T, ID>, T, ID extends Serializable>
+public class StreamRepositoryFactoryBean<R extends StreamCrudRepository<T, ID>, T, ID extends Serializable>
 		implements FactoryBean<R>,
 							 ApplicationListener<ContextRefreshedEvent> {
 
@@ -35,13 +35,13 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 	private       R                     composableRepository;
 
 	@SuppressWarnings("unchecked")
-	public ComposableRepositoryFactoryBean(Class<R> repositoryType) {
+	public StreamRepositoryFactoryBean(Class<R> repositoryType) {
 		this.repositoryType = repositoryType;
 		for (Class<?> intfType : repositoryType.getInterfaces()) {
-			if (!ComposableRepository.class.isAssignableFrom(intfType)) {
+			if (!StreamRepository.class.isAssignableFrom(intfType)) {
 				continue;
 			}
-			Class<?>[] types = resolveTypeArguments(repositoryType, ComposableRepository.class);
+			Class<?>[] types = resolveTypeArguments(repositoryType, StreamRepository.class);
 			this.domainType = (Class<? extends T>) types[0];
 			break;
 		}
@@ -56,11 +56,11 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 		this.beanFactory = event.getApplicationContext();
 		repositories = new Repositories(this.beanFactory);
 		if (null != (delegateRepository = repositories.getRepositoryFor(domainType))) {
-			SimpleComposableCrudRepository<T, ID> repo = new SimpleComposableCrudRepository<T, ID>(delegateRepository);
+			SimpleStreamCrudRepository<T, ID> repo = new SimpleStreamCrudRepository<T, ID>(delegateRepository);
 
 			ProxyFactory proxyFactory = new ProxyFactory(repo);
 			proxyFactory.addInterface(repositoryType);
-			proxyFactory.addInterface(ComposableRepository.class);
+			proxyFactory.addInterface(StreamRepository.class);
 
 			proxyFactory.addAdvice(new QueryMethodExecutor<R, T, ID>(repositoryType, delegateRepository));
 
@@ -83,7 +83,7 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 		return true;
 	}
 
-	private static class QueryMethodExecutor<R extends ComposableCrudRepository<T, ID>, T, ID extends Serializable> implements MethodInterceptor {
+	private static class QueryMethodExecutor<R extends StreamCrudRepository<T, ID>, T, ID extends Serializable> implements MethodInterceptor {
 		private final Map<String, Method>     crudMethods  = new HashMap<String, Method>();
 		private final Map<String, Method>     queryMethods = new HashMap<String, Method>();
 		private final Map<String, Class<?>[]> paramTypes   = new HashMap<String, Class<?>[]>();
@@ -139,9 +139,9 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 					if (null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
 						if (result instanceof Iterable) {
-							return reactor.core.Streams.compose((Iterable) result).get();
+							return reactor.core.Streams.defer((Iterable) result).get();
 						} else {
-							return reactor.core.Streams.compose(result).get();
+							return reactor.core.Streams.defer(result).get();
 						}
 					}
 				}
