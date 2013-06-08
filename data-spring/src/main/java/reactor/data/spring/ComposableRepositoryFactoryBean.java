@@ -139,9 +139,9 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 					if (null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
 						if (result instanceof Iterable) {
-							return reactor.core.R.compose((Iterable) result).get();
+							return reactor.core.Streams.compose((Iterable) result).get();
 						} else {
-							return reactor.core.R.compose(result).get();
+							return reactor.core.Streams.compose(result).get();
 						}
 					}
 				}
