@@ -4,7 +4,6 @@ import java.io.Serializable;
 
 /**
  * @author Jon Brisbin
- * @author Stephane Maldini
  */
-public interface StreamRepository<T, ID extends Serializable> {
+public interface ComposableRepository<T, ID extends Serializable> {
 }

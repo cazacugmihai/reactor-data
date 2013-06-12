@@ -6,8 +6,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories
-import reactor.R
-import reactor.S
+import reactor.core.Composable
+import reactor.core.Environment
+import reactor.core.Promises
 import reactor.data.spring.config.EnableComposableRepositories
 import reactor.data.spring.test.ComposablePersonRepository
 import reactor.data.spring.test.Person
@@ -22,9 +23,11 @@ import java.util.concurrent.TimeUnit
 class ComposableRepositorySpec extends Specification {
 
 	AnnotationConfigApplicationContext appCtx
+	Environment env
 
 	def setup() {
 		appCtx = new AnnotationConfigApplicationContext(SpecConfig)
+		env = appCtx.getBean(Environment)
 	}
 
 	def "generates proxies for ComposableRepositories"() {
@@ -44,8 +47,8 @@ class ComposableRepositorySpec extends Specification {
 
 		when: "an entity is saved"
 		def start = System.currentTimeMillis()
-		def entity = people.save(S.defer(new Person(id: 1, name: "John Doe")).sync().get())
-		entity.await(5, TimeUnit.SECONDS)
+		def entity = people.save(Promises.success(new Person(id: 1, name: "John Doe")).get())
+		entity.await(1, TimeUnit.SECONDS)
 
 		then: "entity has saved without timing out"
 		System.currentTimeMillis() - start < 5000
@@ -57,7 +60,7 @@ class ComposableRepositorySpec extends Specification {
 		} as Function<Person, String>)
 
 		then: "entity should have a name property"
-		name.await(5, TimeUnit.SECONDS) == "John Doe"
+		name.await(1, TimeUnit.SECONDS) == "John Doe"
 
 		when: "a finder method is called"
 		entity = people.findByName("John Doe")
@@ -73,6 +76,11 @@ class ComposableRepositorySpec extends Specification {
 @EnableMongoRepositories(basePackages = ["reactor.data.spring.test"])
 @EnableComposableRepositories(basePackages = ["reactor.data.spring.test"])
 class SpecConfig {
+
+	@Bean
+	Environment reactorEnv() {
+		return new Environment()
+	}
 
 	@Bean
 	MongoTemplate mongoTemplate() {

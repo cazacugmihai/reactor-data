@@ -10,6 +10,8 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.support.Repositories;
 import org.springframework.util.ReflectionUtils;
+import reactor.core.Environment;
+import reactor.core.Streams;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -21,12 +23,13 @@ import static org.springframework.util.ReflectionUtils.doWithMethods;
 
 /**
  * @author Jon Brisbin
- * @author Stephane Maldini
  */
-public class StreamRepositoryFactoryBean<R extends StreamCrudRepository<T, ID>, T, ID extends Serializable>
+public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<T, ID>, T, ID extends Serializable>
 		implements FactoryBean<R>,
 							 ApplicationListener<ContextRefreshedEvent> {
 
+	private final Environment           env;
+	private final String                dispatcher;
 	private final Class<R>              repositoryType;
 	private       Class<? extends T>    domainType;
 	private       ListableBeanFactory   beanFactory;
@@ -35,13 +38,15 @@ public class StreamRepositoryFactoryBean<R extends StreamCrudRepository<T, ID>, 
 	private       R                     composableRepository;
 
 	@SuppressWarnings("unchecked")
-	public StreamRepositoryFactoryBean(Class<R> repositoryType) {
+	public ComposableRepositoryFactoryBean(Environment env, String dispatcher, Class<R> repositoryType) {
+		this.env = env;
+		this.dispatcher = dispatcher;
 		this.repositoryType = repositoryType;
 		for (Class<?> intfType : repositoryType.getInterfaces()) {
-			if (!StreamRepository.class.isAssignableFrom(intfType)) {
+			if (!ComposableRepository.class.isAssignableFrom(intfType)) {
 				continue;
 			}
-			Class<?>[] types = resolveTypeArguments(repositoryType, StreamRepository.class);
+			Class<?>[] types = resolveTypeArguments(repositoryType, ComposableRepository.class);
 			this.domainType = (Class<? extends T>) types[0];
 			break;
 		}
@@ -56,13 +61,13 @@ public class StreamRepositoryFactoryBean<R extends StreamCrudRepository<T, ID>, 
 		this.beanFactory = event.getApplicationContext();
 		repositories = new Repositories(this.beanFactory);
 		if (null != (delegateRepository = repositories.getRepositoryFor(domainType))) {
-			SimpleStreamCrudRepository<T, ID> repo = new SimpleStreamCrudRepository<T, ID>(delegateRepository);
+			SimpleComposableCrudRepository<T, ID> repo = new SimpleComposableCrudRepository<T, ID>(env, dispatcher, delegateRepository);
 
 			ProxyFactory proxyFactory = new ProxyFactory(repo);
 			proxyFactory.addInterface(repositoryType);
-			proxyFactory.addInterface(StreamRepository.class);
+			proxyFactory.addInterface(ComposableRepository.class);
 
-			proxyFactory.addAdvice(new QueryMethodExecutor<R, T, ID>(repositoryType, delegateRepository));
+			proxyFactory.addAdvice(new QueryMethodExecutor<R, T, ID>(repositoryType));
 
 			composableRepository = (R) proxyFactory.getProxy();
 		}
@@ -83,15 +88,12 @@ public class StreamRepositoryFactoryBean<R extends StreamCrudRepository<T, ID>, 
 		return true;
 	}
 
-	private static class QueryMethodExecutor<R extends StreamCrudRepository<T, ID>, T, ID extends Serializable> implements MethodInterceptor {
+	private class QueryMethodExecutor<R extends ComposableCrudRepository<T, ID>, T, ID extends Serializable> implements MethodInterceptor {
 		private final Map<String, Method>     crudMethods  = new HashMap<String, Method>();
 		private final Map<String, Method>     queryMethods = new HashMap<String, Method>();
 		private final Map<String, Class<?>[]> paramTypes   = new HashMap<String, Class<?>[]>();
-		private final CrudRepository<T, ID> delegateRepository;
 
-		private QueryMethodExecutor(Class<R> composableRepositoryType, CrudRepository<T, ID> delegateRepository) {
-			this.delegateRepository = delegateRepository;
-
+		private QueryMethodExecutor(Class<R> composableRepositoryType) {
 			doWithMethods(
 					composableRepositoryType,
 					new ReflectionUtils.MethodCallback() {
@@ -139,9 +141,9 @@ public class StreamRepositoryFactoryBean<R extends StreamCrudRepository<T, ID>, 
 					if (null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
 						if (result instanceof Iterable) {
-							return reactor.core.Streams.defer((Iterable) result).get();
+							return Streams.each((Iterable) result).using(env).get();
 						} else {
-							return reactor.core.Streams.defer(result).get();
+							return Streams.defer(result).using(env).get();
 						}
 					}
 				}

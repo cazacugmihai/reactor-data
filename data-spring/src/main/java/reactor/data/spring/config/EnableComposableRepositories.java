@@ -19,6 +19,11 @@ public @interface EnableComposableRepositories {
 	String[] value() default {};
 
 	/**
+	 * The name of the {@link reactor.fn.dispatch.Dispatcher} implementation to use.
+	 */
+	String dispatcher() default "ringBuffer";
+
+	/**
 	 * Base packages to scan for annotated components. {@link #value()} is an alias for (and mutually exclusive with) this
 	 * attribute. Use {@link #basePackageClasses()} for a type-safe alternative to String-based package names.
 	 */
@@ -26,8 +31,8 @@ public @interface EnableComposableRepositories {
 
 	/**
 	 * Type-safe alternative to {@link #basePackages()} for specifying the packages to scan for annotated components. The
-	 * package of each class specified will be scanned. Consider creating a special no-op marker class or interface in
-	 * each package that serves no purpose other than being referenced by this attribute.
+	 * package of each class specified will be scanned. Consider creating a special no-op marker class or interface in each
+	 * package that serves no purpose other than being referenced by this attribute.
 	 */
 	Class<?>[] basePackageClasses() default {};
 

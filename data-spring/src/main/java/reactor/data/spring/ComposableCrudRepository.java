@@ -1,14 +1,15 @@
 package reactor.data.spring;
 
+import reactor.core.Composable;
+import reactor.core.Promise;
 import reactor.core.Stream;
 
 import java.io.Serializable;
 
 /**
  * @author Jon Brisbin
- * @author Stephane Maldini
  */
-public interface StreamCrudRepository<T, ID extends Serializable> extends StreamRepository<T, ID> {
+public interface ComposableCrudRepository<T, ID extends Serializable> extends ComposableRepository<T, ID> {
 
 	/**
 	 * Saves all given entities.
@@ -17,7 +18,7 @@ public interface StreamCrudRepository<T, ID extends Serializable> extends Stream
 	 * @return the saved entities
 	 * @throws IllegalArgumentException in case the given entity is (@literal null}.
 	 */
-	<S extends T> Stream<S> save(Stream<S> entities);
+	<S extends T> Stream<S> save(Composable<S> entities);
 
 	/**
 	 * Retrieves an entity by its id.
@@ -26,7 +27,7 @@ public interface StreamCrudRepository<T, ID extends Serializable> extends Stream
 	 * @return the entity with the given id or {@literal null} if none found
 	 * @throws IllegalArgumentException if {@code id} is {@literal null}
 	 */
-	Stream<T> findOne(ID id);
+	Promise<T> findOne(ID id);
 
 	/**
 	 * Returns whether an entity with the given id exists.
@@ -35,7 +36,7 @@ public interface StreamCrudRepository<T, ID extends Serializable> extends Stream
 	 * @return true if an entity with the given id exists, {@literal false} otherwise
 	 * @throws IllegalArgumentException if {@code id} is {@literal null}
 	 */
-	Stream<Boolean> exists(ID id);
+	Promise<Boolean> exists(ID id);
 
 	/**
 	 * Returns all instances of the type.
@@ -50,14 +51,14 @@ public interface StreamCrudRepository<T, ID extends Serializable> extends Stream
 	 * @param ids
 	 * @return
 	 */
-	Stream<T> findAll(Stream<ID> ids);
+	Stream<T> findAll(Iterable<ID> ids);
 
 	/**
 	 * Returns the number of entities available.
 	 *
 	 * @return the number of entities
 	 */
-	Stream<Long> count();
+	Promise<Long> count();
 
 	/**
 	 * Deletes the entity with the given id.
@@ -65,7 +66,7 @@ public interface StreamCrudRepository<T, ID extends Serializable> extends Stream
 	 * @param id must not be {@literal null}.
 	 * @throws IllegalArgumentException in case the given {@code id} is {@literal null}
 	 */
-	Stream<Void> delete(ID id);
+	Promise<Void> delete(ID id);
 
 	/**
 	 * Deletes the given entities.
@@ -73,11 +74,11 @@ public interface StreamCrudRepository<T, ID extends Serializable> extends Stream
 	 * @param entities
 	 * @throws IllegalArgumentException in case the given {@link Iterable} is (@literal null}.
 	 */
-	Stream<Void> delete(Stream<? extends T> entities);
+	Promise<Void> delete(Composable<? extends T> entities);
 
 	/**
 	 * Deletes all entities managed by the repository.
 	 */
-	Stream<Void> deleteAll();
+	Promise<Void> deleteAll();
 
 }

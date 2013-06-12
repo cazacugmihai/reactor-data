@@ -11,8 +11,9 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.util.ClassUtils;
-import reactor.data.spring.StreamRepository;
-import reactor.data.spring.StreamRepositoryFactoryBean;
+import reactor.core.Environment;
+import reactor.data.spring.ComposableRepository;
+import reactor.data.spring.ComposableRepositoryFactoryBean;
 
 import java.util.Map;
 
@@ -22,6 +23,8 @@ import java.util.Map;
 public class ComposableRepositoryBeanDefinitionRegistrar
 		implements ImportBeanDefinitionRegistrar,
 							 ResourceLoaderAware {
+
+	private static final String REACTOR_ENV = "reactorEnv";
 
 	private final ClassLoader classLoader = getClass().getClassLoader();
 	private ResourceLoader resourceLoader;
@@ -42,7 +45,7 @@ public class ComposableRepositoryBeanDefinitionRegistrar
 				return beanDefinition.getMetadata().isIndependent();
 			}
 		};
-		provider.addIncludeFilter(new AssignableTypeFilter(StreamRepository.class));
+		provider.addIncludeFilter(new AssignableTypeFilter(ComposableRepository.class));
 		provider.setResourceLoader(resourceLoader);
 
 		String[] basePackages = (String[]) attrs.get("basePackages");
@@ -55,9 +58,18 @@ public class ComposableRepositoryBeanDefinitionRegistrar
 			basePackages = new String[]{s};
 		}
 
+		if (!registry.containsBeanDefinition(REACTOR_ENV)) {
+			BeanDefinitionBuilder envBeanDef = BeanDefinitionBuilder.rootBeanDefinition(Environment.class);
+			registry.registerBeanDefinition(REACTOR_ENV, envBeanDef.getBeanDefinition());
+		}
+
+		String dispatcher = attrs.get("dispatcher").toString();
+
 		for (String basePackage : basePackages) {
 			for (BeanDefinition beanDef : provider.findCandidateComponents(basePackage)) {
-				BeanDefinitionBuilder factoryBeanDef = BeanDefinitionBuilder.rootBeanDefinition(StreamRepositoryFactoryBean.class.getName());
+				BeanDefinitionBuilder factoryBeanDef = BeanDefinitionBuilder.rootBeanDefinition(ComposableRepositoryFactoryBean.class.getName());
+				factoryBeanDef.addConstructorArgReference(REACTOR_ENV);
+				factoryBeanDef.addConstructorArgValue(dispatcher);
 				factoryBeanDef.addConstructorArgValue(ClassUtils.resolveClassName(beanDef.getBeanClassName(), classLoader));
 
 				registry.registerBeanDefinition(beanDef.getBeanClassName(), factoryBeanDef.getBeanDefinition());
