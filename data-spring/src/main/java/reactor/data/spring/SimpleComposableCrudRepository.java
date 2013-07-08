@@ -33,7 +33,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 
 	@Override
 	public <S extends T> Stream<S> save(Composable<S> entities) {
-		final Stream<S> s = Streams.<S>defer()
+		final Deferred<S,Stream<S>> s = Streams.<S>defer()
 															 .using(env)
 															 .using(reactor)
 															 .get();
@@ -45,7 +45,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 			}
 		});
 
-		return s;
+		return s.compose();
 	}
 
 	@Override
@@ -78,7 +78,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 
 	@Override
 	public Stream<T> findAll() {
-		final Stream<T> s = Streams.<T>defer()
+		final Deferred<T,Stream<T>> s = Streams.<T>defer()
 															 .using(env)
 															 .using(reactor)
 															 .get();
@@ -93,12 +93,12 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		};
 		Fn.schedule(consumer, null, reactor);
 
-		return s;
+		return s.compose();
 	}
 
 	@Override
 	public Stream<T> findAll(final Iterable<ID> ids) {
-		final Stream<T> s = Streams.<T>defer()
+		final Deferred<T,Stream<T>> s = Streams.<T>defer()
 															 .using(env)
 															 .using(reactor)
 															 .get();
@@ -113,12 +113,12 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		};
 		Fn.schedule(consumer, null, reactor);
 
-		return s;
+		return s.compose();
 	}
 
 	@Override
 	public Promise<Long> count() {
-		final Promise<Long> p = Promises.<Long>defer()
+		final Deferred<Long, Promise<Long>> p = Promises.<Long>defer()
 																		.using(env)
 																		.using(reactor)
 																		.get();
@@ -131,7 +131,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		};
 		Fn.schedule(consumer, null, reactor);
 
-		return p;
+		return p.compose();
 	}
 
 	@Override
@@ -152,7 +152,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	public Promise<Void> delete(Composable<? extends T> entities) {
-		final Promise<Void> p = Promises.<Void>defer()
+		final Deferred<Void, Promise<Void>> p = Promises.<Void>defer()
 																		.using(env)
 																		.using(reactor)
 																		.get();
@@ -164,12 +164,12 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 				p.accept((Void) null);
 			}
 		});
-		return p;
+		return p.compose();
 	}
 
 	@Override
 	public Promise<Void> deleteAll() {
-		final Promise<Void> c = Promises.<Void>defer()
+		final Deferred<Void, Promise<Void>> c = Promises.<Void>defer()
 																		.using(env)
 																		.using(reactor)
 																		.get();
@@ -183,7 +183,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		};
 		Fn.schedule(consumer, null, reactor);
 
-		return c;
+		return c.compose();
 	}
 
 }

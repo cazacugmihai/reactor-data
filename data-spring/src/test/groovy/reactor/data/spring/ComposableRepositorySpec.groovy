@@ -12,9 +12,11 @@ import reactor.core.Promises
 import reactor.data.spring.config.EnableComposableRepositories
 import reactor.data.spring.test.ComposablePersonRepository
 import reactor.data.spring.test.Person
+import reactor.fn.Consumer
 import reactor.fn.Function
 import spock.lang.Specification
 
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
@@ -48,7 +50,6 @@ class ComposableRepositorySpec extends Specification {
 		when: "an entity is saved"
 		def start = System.currentTimeMillis()
 		def entity = people.save(Promises.success(new Person(id: 1, name: "John Doe")).get())
-		entity.await(1, TimeUnit.SECONDS)
 
 		then: "entity has saved without timing out"
 		System.currentTimeMillis() - start < 5000
@@ -63,10 +64,17 @@ class ComposableRepositorySpec extends Specification {
 		name.await(1, TimeUnit.SECONDS) == "John Doe"
 
 		when: "a finder method is called"
-		entity = people.findByName("John Doe")
+		def latch = new CountDownLatch(1)
+		Person person
+		people.findByName("John Doe").consume({
+			println it
+			person = it
+			latch.countDown()
+		} as Consumer<Person>).resolve()
+		latch.await(1, TimeUnit.SECONDS)
 
 		then: "entity should have a name property"
-		entity.await(1, TimeUnit.SECONDS)?.name == "John Doe"
+		person?.name == "John Doe"
 
 	}
 
