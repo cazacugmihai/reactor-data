@@ -6,14 +6,13 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories
-import reactor.core.Composable
 import reactor.core.Environment
-import reactor.core.Promises
+import reactor.core.composable.Promises
 import reactor.data.spring.config.EnableComposableRepositories
 import reactor.data.spring.test.ComposablePersonRepository
 import reactor.data.spring.test.Person
-import reactor.fn.Consumer
-import reactor.fn.Function
+import reactor.function.Consumer
+import reactor.function.Function
 import spock.lang.Specification
 
 import java.util.concurrent.CountDownLatch
@@ -21,6 +20,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * @author Jon Brisbin
+ * @author Stephane Maldini
  */
 class ComposableRepositorySpec extends Specification {
 

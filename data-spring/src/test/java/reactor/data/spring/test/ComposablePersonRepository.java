@@ -1,6 +1,6 @@
 package reactor.data.spring.test;
 
-import reactor.core.Stream;
+import reactor.core.composable.Stream;
 import reactor.data.spring.ComposableCrudRepository;
 
 /**
