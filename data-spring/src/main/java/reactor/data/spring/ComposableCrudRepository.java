@@ -1,13 +1,12 @@
 package reactor.data.spring;
 
-import reactor.core.Composable;
-import reactor.core.Promise;
-import reactor.core.Stream;
+import reactor.core.composable.*;
 
 import java.io.Serializable;
 
 /**
  * @author Jon Brisbin
+ * @author Stephane Maldini
  */
 public interface ComposableCrudRepository<T, ID extends Serializable> extends ComposableRepository<T, ID> {
 

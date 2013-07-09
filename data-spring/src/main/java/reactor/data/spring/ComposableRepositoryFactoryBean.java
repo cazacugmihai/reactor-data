@@ -10,10 +10,10 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.support.Repositories;
 import org.springframework.util.ReflectionUtils;
-import reactor.core.Deferred;
+import reactor.core.composable.Deferred;
 import reactor.core.Environment;
-import reactor.core.Stream;
-import reactor.core.Streams;
+import reactor.core.composable.Stream;
+import reactor.core.composable.Streams;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -143,7 +143,7 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 					}
 					if (null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
-							Deferred<Object, Stream<Object>> deferredStream = Streams.<Object>defer(result).using(env).get();
+							Deferred<Object, Stream<Object>> deferredStream = Streams.<Object>defer(result).env(env).get();
 						return deferredStream.compose();
 					}
 				}

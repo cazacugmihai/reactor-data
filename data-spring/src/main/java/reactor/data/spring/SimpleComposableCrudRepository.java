@@ -3,30 +3,29 @@ package reactor.data.spring;
 import org.springframework.data.repository.CrudRepository;
 import reactor.Fn;
 import reactor.R;
-import reactor.core.*;
-import reactor.fn.Consumer;
-import reactor.fn.Function;
-import reactor.fn.dispatch.Dispatcher;
+import reactor.core.Reactor;
+import reactor.core.Environment;
+import reactor.core.composable.*;
+import reactor.function.*;
 
 import java.io.Serializable;
 
 /**
  * @author Jon Brisbin
+ * @author Stephane Maldini
  */
 class SimpleComposableCrudRepository<T, ID extends Serializable> implements ComposableCrudRepository<T, ID> {
 
 	private final Environment           env;
-	private final String                dispatcher;
 	private final Reactor               reactor;
 	private final CrudRepository<T, ID> delegateRepository;
 
 	SimpleComposableCrudRepository(Environment env, String dispatcher, CrudRepository<T, ID> delegateRepository) {
 		this.env = env;
-		this.dispatcher = dispatcher;
 		this.delegateRepository = delegateRepository;
 
 		this.reactor = R.reactor()
-										.using(env)
+										.env(env)
 										.dispatcher(dispatcher)
 										.get();
 	}
@@ -34,8 +33,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public <S extends T> Stream<S> save(Composable<S> entities) {
 		final Deferred<S,Stream<S>> s = Streams.<S>defer()
-															 .using(env)
-															 .using(reactor)
+															 .env(env)
+															 .reactor(reactor)
 															 .get();
 
 		entities.consume(new Consumer<S>() {
@@ -51,8 +50,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<T> findOne(ID id) {
 		return Promises.success(id)
-									 .using(env)
-									 .using(reactor)
+									 .env(env)
+									 .reactor(reactor)
 									 .get()
 									 .map(new Function<ID, T>() {
 										 @Override
@@ -65,8 +64,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<Boolean> exists(ID id) {
 		return Promises.success(id)
-									 .using(env)
-									 .using(reactor)
+									 .env(env)
+									 .reactor(reactor)
 									 .get()
 									 .map(new Function<ID, Boolean>() {
 										 @Override
@@ -79,8 +78,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Stream<T> findAll() {
 		final Deferred<T,Stream<T>> s = Streams.<T>defer()
-															 .using(env)
-															 .using(reactor)
+															 .env(env)
+															 .reactor(reactor)
 															 .get();
 
 		Consumer<Void> consumer = new Consumer<Void>() {
@@ -99,8 +98,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Stream<T> findAll(final Iterable<ID> ids) {
 		final Deferred<T,Stream<T>> s = Streams.<T>defer()
-															 .using(env)
-															 .using(reactor)
+															 .env(env)
+															 .reactor(reactor)
 															 .get();
 
 		Consumer<Void> consumer = new Consumer<Void>() {
@@ -119,8 +118,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<Long> count() {
 		final Deferred<Long, Promise<Long>> p = Promises.<Long>defer()
-																		.using(env)
-																		.using(reactor)
+																		.env(env)
+																		.reactor(reactor)
 																		.get();
 
 		Consumer<Void> consumer = new Consumer<Void>() {
@@ -137,8 +136,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<Void> delete(ID id) {
 		return Promises.success(id)
-									 .using(env)
-									 .using(reactor)
+									 .env(env)
+									 .reactor(reactor)
 									 .get()
 									 .map(new Function<ID, Void>() {
 										 @Override
@@ -153,8 +152,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	public Promise<Void> delete(Composable<? extends T> entities) {
 		final Deferred<Void, Promise<Void>> p = Promises.<Void>defer()
-																		.using(env)
-																		.using(reactor)
+																		.env(env)
+																		.reactor(reactor)
 																		.get();
 
 		entities.consume(new Consumer() {
@@ -170,8 +169,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<Void> deleteAll() {
 		final Deferred<Void, Promise<Void>> c = Promises.<Void>defer()
-																		.using(env)
-																		.using(reactor)
+																		.env(env)
+																		.reactor(reactor)
 																		.get();
 
 		Consumer<Void> consumer = new Consumer<Void>() {
