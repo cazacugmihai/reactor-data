@@ -6,8 +6,8 @@ import reactor.R;
 import reactor.core.Reactor;
 import reactor.core.Environment;
 import reactor.core.composable.*;
-import reactor.core.composable.spec.Promises;
-import reactor.core.composable.spec.Streams;
+import reactor.core.composable.Promises;
+import reactor.core.composable.Streams;
 import reactor.function.*;
 
 import java.io.Serializable;
