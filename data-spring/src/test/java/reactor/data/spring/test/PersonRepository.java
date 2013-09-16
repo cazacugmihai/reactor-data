@@ -5,7 +5,7 @@ import org.springframework.data.repository.CrudRepository;
 /**
  * @author Jon Brisbin
  */
-public interface PersonRepository extends CrudRepository<Person, Long> {
+public interface PersonRepository extends CrudRepository<Person, String> {
 
 	Person findByName(String name);
 

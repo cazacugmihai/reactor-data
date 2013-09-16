@@ -19,9 +19,6 @@ ext {
   gradleVersion = '1.7'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  // Languages
-  groovyVersion = '2.2.0-beta-2'
-
   // Logging
   slf4jVersion = '1.7.5'
   logbackVersion = '1.0.13'
@@ -34,9 +31,6 @@ ext {
 
   // Reactor
   reactorVersion = '1.0.0.BUILD-SNAPSHOT'
-
-  // Testing
-  spockVersion = '0.7-groovy-2.0'
 }
 
 apply from: "$gradleScriptDir/setup.gradle"
@@ -47,7 +41,6 @@ allprojects {
 
   configurations.all {
     exclude group: "commons-logging"
-    exclude module: "junit"
   }
 
   group = 'reactor.data'
@@ -60,7 +53,6 @@ allprojects {
 
 subprojects { subproject ->
   apply plugin: 'java'
-  apply plugin: 'groovy'
 
   sourceCompatibility = 1.8
   targetCompatibility = 1.8
@@ -70,11 +62,6 @@ subprojects { subproject ->
   task sourcesJar(type: Jar) {
     classifier = 'sources'
     from sourceSets.main.allSource
-  }
-
-  task groovydocJar(type: Jar) {
-    classifier = 'groovydoc'
-    from groovydoc
   }
 
   task javadocJar(type: Jar) {
@@ -91,28 +78,18 @@ subprojects { subproject ->
 
   artifacts {
     archives sourcesJar
-    archives groovydocJar
     archives javadocJar
   }
 
-  // dependencies that are common across all java projects
-  dependencies {
-    // Logging
-    compile "org.slf4j:slf4j-api:$slf4jVersion"
-
-    // Groovy
-    testCompile "org.codehaus.groovy:groovy-all:$groovyVersion"
-
-    // Testing
-    testCompile "org.spockframework:spock-core:$spockVersion",
-                "org.hamcrest:hamcrest-library:1.3"
-    testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
-  }
 }
 
 project('data-core') {
   description = 'Core Reactor components for working with datastores'
   dependencies {
+    // Logging
+    compile "org.slf4j:slf4j-api:$slf4jVersion"
+
+    // Reactor
     compile "org.projectreactor:reactor-core:$reactorVersion"
   }
 }
@@ -128,7 +105,8 @@ project('data-spring') {
             "org.springframework:spring-context-support:$springVersion",
             "org.springframework:spring-core:$springVersion",
             "org.springframework:spring-expression:$springVersion",
-            "org.springframework:spring-tx:$springVersion"
+            "org.springframework:spring-tx:$springVersion",
+            "org.springframework:spring-web:$springVersion"
 
     // Spring Data
     compile "org.springframework.data:spring-data-commons:$sdCommonsVersion"
@@ -139,6 +117,10 @@ project('data-spring') {
     compile "org.projectreactor:reactor-spring:$reactorVersion"
 
     // Testing
-    testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
+    testCompile "junit:junit-dep:4.11",
+                "org.hamcrest:hamcrest-library:1.3",
+                "org.springframework:spring-test:$springVersion"
+    testRuntime "ch.qos.logback:logback-classic:$logbackVersion",
+                "org.slf4j:jcl-over-slf4j:$slf4jVersion"
   }
 }

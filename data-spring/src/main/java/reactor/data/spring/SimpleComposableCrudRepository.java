@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import org.springframework.data.repository.CrudRepository;
 import reactor.core.Environment;
+import reactor.core.HashWheelTimer;
 import reactor.core.Reactor;
 import reactor.core.composable.Composable;
 import reactor.core.composable.Deferred;
@@ -12,9 +13,6 @@ import reactor.core.composable.Stream;
 import reactor.core.composable.spec.Promises;
 import reactor.core.composable.spec.Streams;
 import reactor.core.spec.Reactors;
-import reactor.event.Event;
-import reactor.function.Consumer;
-import reactor.tuple.Tuple;
 
 /**
  * @author Jon Brisbin
@@ -23,11 +21,16 @@ import reactor.tuple.Tuple;
 class SimpleComposableCrudRepository<T, ID extends Serializable> implements ComposableCrudRepository<T, ID> {
 
 	private final Environment           env;
-	private final Reactor               reactor;
+	private final HashWheelTimer        timer;
 	private final CrudRepository<T, ID> delegateRepository;
+	private final Reactor               reactor;
 
-	SimpleComposableCrudRepository(Environment env, String dispatcher, CrudRepository<T, ID> delegateRepository) {
+	SimpleComposableCrudRepository(Environment env,
+	                               String dispatcher,
+	                               HashWheelTimer timer,
+	                               CrudRepository<T, ID> delegateRepository) {
 		this.env = env;
+		this.timer = timer;
 		this.delegateRepository = delegateRepository;
 
 		this.reactor = Reactors.reactor()
@@ -38,122 +41,141 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 
 	@Override
 	public <S extends T> Stream<S> save(Composable<S> entities) {
-		final Deferred<S, Stream<S>> s = Streams.<S>defer()
+		final Deferred<S, Stream<S>> d = Streams.<S>defer()
 		                                        .env(env)
 		                                        .dispatcher(reactor.getDispatcher())
 		                                        .get();
 
-		entities.consume(entity -> s.accept(delegateRepository.save(entity)));
+		timer.submit(l -> {
+			if(entities instanceof Promise) {
+				((Promise<S>)entities).onSuccess(e -> d.accept(delegateRepository.save(e))).onError(d::accept);
+			} else {
+				entities.consume(e -> d.accept(delegateRepository.save(e)));
+			}
+		});
 
-		return s.compose();
+		return d.compose();
 	}
 
 	@Override
 	public Promise<T> findOne(ID id) {
-		return Promises.success(id)
-		               .env(env)
-		               .dispatcher(reactor.getDispatcher())
-		               .get()
-		               .map(delegateRepository::findOne);
+		Deferred<T, Promise<T>> d = Promises.<T>defer()
+		                                    .env(env)
+		                                    .dispatcher(reactor.getDispatcher())
+		                                    .get();
+
+		timer.submit(l -> d.accept(delegateRepository.findOne(id)));
+
+		return d.compose();
 	}
 
 	@Override
 	public Promise<Boolean> exists(ID id) {
-		return Promises.success(id)
-		               .env(env)
-		               .dispatcher(reactor.getDispatcher())
-		               .get()
-		               .map(delegateRepository::exists);
-	}
-
-	@Override
-	public Stream<T> findAll() {
-		final Deferred<T, Stream<T>> s = Streams.<T>defer()
-		                                        .env(env)
-		                                        .dispatcher(reactor.getDispatcher())
-		                                        .get();
-
-		Consumer<Void> consumer = v -> {
-			for(T t : delegateRepository.findAll()) {
-				s.accept(t);
-			}
-		};
-		reactor.notify(Tuple.of(consumer, Event.NULL_EVENT));
-
-		return s.compose();
-	}
-
-	@Override
-	public Stream<T> findAll(final Iterable<ID> ids) {
-		final Deferred<T, Stream<T>> s = Streams.<T>defer()
-		                                        .env(env)
-		                                        .dispatcher(reactor.getDispatcher())
-		                                        .get();
-
-		Consumer<Void> consumer = v -> {
-			for(T t : delegateRepository.findAll(ids)) {
-				s.accept(t);
-			}
-		};
-		reactor.notify(Tuple.of(consumer, Event.NULL_EVENT));
-
-		return s.compose();
-	}
-
-	@Override
-	public Promise<Long> count() {
-		final Deferred<Long, Promise<Long>> p = Promises.<Long>defer()
+		Deferred<Boolean, Promise<Boolean>> d = Promises.<Boolean>defer()
 		                                                .env(env)
 		                                                .dispatcher(reactor.getDispatcher())
 		                                                .get();
 
-		Consumer<Void> consumer = v -> p.accept(delegateRepository.count());
-		reactor.notify(Tuple.of(consumer, Event.NULL_EVENT));
+		timer.submit(l -> d.accept(delegateRepository.exists(id)));
 
-		return p.compose();
+		return d.compose();
 	}
 
 	@Override
-	public Promise<Void> delete(ID id) {
-		return Promises.success(id)
-		               .env(env)
-		               .dispatcher(reactor.getDispatcher())
-		               .get()
-		               .map(i -> {
-			               delegateRepository.delete(i);
-			               return null;
-		               });
+	public Stream<T> findAll() {
+		final Deferred<T, Stream<T>> d = Streams.<T>defer()
+		                                        .env(env)
+		                                        .dispatcher(reactor.getDispatcher())
+		                                        .get();
+
+		timer.submit(l -> {
+			for(T t : delegateRepository.findAll()) {
+				d.accept(t);
+			}
+		});
+
+		return d.compose();
+	}
+
+	@Override
+	public Stream<T> findAll(final Iterable<ID> ids) {
+		final Deferred<T, Stream<T>> d = Streams.<T>defer()
+		                                        .env(env)
+		                                        .dispatcher(reactor.getDispatcher())
+		                                        .get();
+
+		timer.submit(l -> {
+			for(T t : delegateRepository.findAll(ids)) {
+				d.accept(t);
+			}
+		});
+
+		return d.compose();
+	}
+
+	@Override
+	public Promise<Long> count() {
+		final Deferred<Long, Promise<Long>> d = Promises.<Long>defer()
+		                                                .env(env)
+		                                                .dispatcher(reactor.getDispatcher())
+		                                                .get();
+
+		timer.submit(l -> d.accept(delegateRepository.count()));
+
+		return d.compose();
+	}
+
+	@Override
+	public Promise<T> delete(ID id) {
+		final Deferred<T, Promise<T>> d = Promises.<T>defer()
+		                                          .env(env)
+		                                          .dispatcher(reactor.getDispatcher())
+		                                          .get();
+
+		timer.submit(l -> {
+			T t = delegateRepository.findOne(id);
+			delegateRepository.delete(id);
+			d.accept(t);
+		});
+
+		return d.compose();
 	}
 
 	@Override
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	public Promise<Void> delete(Composable<? extends T> entities) {
-		final Deferred<Void, Promise<Void>> p = Promises.<Void>defer()
+		final Deferred<Void, Promise<Void>> d = Promises.<Void>defer()
 		                                                .env(env)
 		                                                .dispatcher(reactor.getDispatcher())
 		                                                .get();
 
-		entities.consume(o -> {
-			delegateRepository.delete(o);
-			p.accept((Void)null);
+		timer.submit(l -> {
+			if(entities instanceof Promise) {
+				((Promise<T>)entities).onSuccess(e -> {
+					delegateRepository.delete(e);
+					d.accept((Void)null);
+				}).onError(d::accept);
+			} else {
+				entities.consume(delegateRepository::delete);
+			}
 		});
-		return p.compose();
+
+		return d.compose();
 	}
 
 	@Override
 	public Promise<Void> deleteAll() {
-		final Deferred<Void, Promise<Void>> c = Promises.<Void>defer()
+		final Deferred<Void, Promise<Void>> d = Promises.<Void>defer()
 		                                                .env(env)
 		                                                .dispatcher(reactor.getDispatcher())
 		                                                .get();
 
-		Consumer<Void> consumer = v -> {
+		timer.submit(l -> {
 			delegateRepository.deleteAll();
-			c.accept((Void)null);
-		};
-		reactor.notify(Tuple.of(consumer, Event.NULL_EVENT));
+			d.accept((Void)null);
+		});
 
-		return c.compose();
+		return d.compose();
 	}
 
 }

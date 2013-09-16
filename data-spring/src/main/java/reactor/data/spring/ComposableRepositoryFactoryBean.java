@@ -19,6 +19,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.support.Repositories;
 import org.springframework.util.ReflectionUtils;
 import reactor.core.Environment;
+import reactor.core.HashWheelTimer;
 import reactor.core.composable.Deferred;
 import reactor.core.composable.Stream;
 import reactor.core.composable.Streams;
@@ -33,6 +34,7 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 
 	private final Environment           env;
 	private final String                dispatcher;
+	private final HashWheelTimer        timer;
 	private final Class<R>              repositoryType;
 	private       Class<? extends T>    domainType;
 	private       ListableBeanFactory   beanFactory;
@@ -41,9 +43,13 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 	private       R                     composableRepository;
 
 	@SuppressWarnings("unchecked")
-	public ComposableRepositoryFactoryBean(Environment env, String dispatcher, Class<R> repositoryType) {
+	public ComposableRepositoryFactoryBean(Environment env,
+	                                       String dispatcher,
+	                                       HashWheelTimer timer,
+	                                       Class<R> repositoryType) {
 		this.env = env;
 		this.dispatcher = dispatcher;
+		this.timer = timer;
 		this.repositoryType = repositoryType;
 		for(Class<?> intfType : repositoryType.getInterfaces()) {
 			if(!ComposableRepository.class.isAssignableFrom(intfType)) {
@@ -66,6 +72,7 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 		if(null != (delegateRepository = (CrudRepository<T, ID>)repositories.getRepositoryFor(domainType))) {
 			SimpleComposableCrudRepository<T, ID> repo = new SimpleComposableCrudRepository<>(env,
 			                                                                                  dispatcher,
+			                                                                                  timer,
 			                                                                                  delegateRepository);
 
 			ProxyFactory proxyFactory = new ProxyFactory(repo);
@@ -143,8 +150,20 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 					}
 					if(null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
-						Deferred<Object, Stream<Object>> deferredStream = Streams.<Object>defer(result).env(env).get();
-						return deferredStream.compose();
+						Deferred<Object, Stream<Object>> d = Streams.<Object>defer(result)
+						                                            .env(env)
+						                                            .dispatcher(dispatcher)
+						                                            .get();
+
+						final Method queryMethod = m;
+						timer.submit(l -> {
+							Object returnVal = ReflectionUtils.invokeMethod(queryMethod,
+							                                                delegateRepository,
+							                                                invocation.getArguments());
+							d.accept(returnVal);
+						});
+
+						return d.compose();
 					}
 				}
 

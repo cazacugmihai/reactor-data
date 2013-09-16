@@ -1,5 +1,6 @@
 package reactor.data.spring.test;
 
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 /**
@@ -8,14 +9,22 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document
 public class Person {
 
-	private Long   id;
+	@Id
+	private String id;
 	private String name;
 
-	public Long getId() {
+	public Person() {
+	}
+
+	public Person(String name) {
+		this.name = name;
+	}
+
+	public String getId() {
 		return id;
 	}
 
-	public void setId(Long id) {
+	public void setId(String id) {
 		this.id = id;
 	}
 
@@ -26,4 +35,5 @@ public class Person {
 	public void setName(String name) {
 		this.name = name;
 	}
+
 }

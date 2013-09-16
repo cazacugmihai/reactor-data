@@ -1,8 +1,10 @@
 package reactor.data.spring;
 
-import reactor.core.composable.*;
-
 import java.io.Serializable;
+
+import reactor.core.composable.Composable;
+import reactor.core.composable.Promise;
+import reactor.core.composable.Stream;
 
 /**
  * @author Jon Brisbin
@@ -14,26 +16,37 @@ public interface ComposableCrudRepository<T, ID extends Serializable> extends Co
 	 * Saves all given entities.
 	 *
 	 * @param entities
+	 *
 	 * @return the saved entities
-	 * @throws IllegalArgumentException in case the given entity is (@literal null}.
+	 *
+	 * @throws IllegalArgumentException
+	 * 		in case the given entity is (@literal null}.
 	 */
 	<S extends T> Stream<S> save(Composable<S> entities);
 
 	/**
 	 * Retrieves an entity by its id.
 	 *
-	 * @param id must not be {@literal null}.
+	 * @param id
+	 * 		must not be {@literal null}.
+	 *
 	 * @return the entity with the given id or {@literal null} if none found
-	 * @throws IllegalArgumentException if {@code id} is {@literal null}
+	 *
+	 * @throws IllegalArgumentException
+	 * 		if {@code id} is {@literal null}
 	 */
 	Promise<T> findOne(ID id);
 
 	/**
 	 * Returns whether an entity with the given id exists.
 	 *
-	 * @param id must not be {@literal null}.
+	 * @param id
+	 * 		must not be {@literal null}.
+	 *
 	 * @return true if an entity with the given id exists, {@literal false} otherwise
-	 * @throws IllegalArgumentException if {@code id} is {@literal null}
+	 *
+	 * @throws IllegalArgumentException
+	 * 		if {@code id} is {@literal null}
 	 */
 	Promise<Boolean> exists(ID id);
 
@@ -48,6 +61,7 @@ public interface ComposableCrudRepository<T, ID extends Serializable> extends Co
 	 * Returns all instances of the type with the given IDs.
 	 *
 	 * @param ids
+	 *
 	 * @return
 	 */
 	Stream<T> findAll(Iterable<ID> ids);
@@ -62,16 +76,23 @@ public interface ComposableCrudRepository<T, ID extends Serializable> extends Co
 	/**
 	 * Deletes the entity with the given id.
 	 *
-	 * @param id must not be {@literal null}.
-	 * @throws IllegalArgumentException in case the given {@code id} is {@literal null}
+	 * @param id
+	 * 		must not be {@literal null}.
+	 *
+	 * @return a {@link reactor.core.composable.Promise} fulfilled by the object deleted if it existed
+	 *
+	 * @throws IllegalArgumentException
+	 * 		in case the given {@code id} is {@literal null}
 	 */
-	Promise<Void> delete(ID id);
+	Promise<T> delete(ID id);
 
 	/**
 	 * Deletes the given entities.
 	 *
 	 * @param entities
-	 * @throws IllegalArgumentException in case the given {@link Iterable} is (@literal null}.
+	 *
+	 * @throws IllegalArgumentException
+	 * 		in case the given {@link Iterable} is (@literal null}.
 	 */
 	Promise<Void> delete(Composable<? extends T> entities);
 
