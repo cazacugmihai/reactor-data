@@ -1,5 +1,13 @@
 package reactor.data.spring;
 
+import static org.springframework.core.GenericTypeResolver.*;
+import static org.springframework.util.ReflectionUtils.*;
+
+import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.framework.ProxyFactory;
@@ -10,18 +18,10 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.support.Repositories;
 import org.springframework.util.ReflectionUtils;
-import reactor.core.composable.Deferred;
 import reactor.core.Environment;
+import reactor.core.composable.Deferred;
 import reactor.core.composable.Stream;
 import reactor.core.composable.Streams;
-
-import java.io.Serializable;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.springframework.core.GenericTypeResolver.resolveTypeArguments;
-import static org.springframework.util.ReflectionUtils.doWithMethods;
 
 /**
  * @author Jon Brisbin
@@ -29,7 +29,7 @@ import static org.springframework.util.ReflectionUtils.doWithMethods;
  */
 public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<T, ID>, T, ID extends Serializable>
 		implements FactoryBean<R>,
-							 ApplicationListener<ContextRefreshedEvent> {
+		           ApplicationListener<ContextRefreshedEvent> {
 
 	private final Environment           env;
 	private final String                dispatcher;
@@ -45,12 +45,12 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 		this.env = env;
 		this.dispatcher = dispatcher;
 		this.repositoryType = repositoryType;
-		for (Class<?> intfType : repositoryType.getInterfaces()) {
-			if (!ComposableRepository.class.isAssignableFrom(intfType)) {
+		for(Class<?> intfType : repositoryType.getInterfaces()) {
+			if(!ComposableRepository.class.isAssignableFrom(intfType)) {
 				continue;
 			}
 			Class<?>[] types = resolveTypeArguments(repositoryType, ComposableRepository.class);
-			this.domainType = (Class<? extends T>) types[0];
+			this.domainType = (Class<? extends T>)types[0];
 			break;
 		}
 	}
@@ -58,21 +58,23 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 	@Override
 	@SuppressWarnings("unchecked")
 	public void onApplicationEvent(ContextRefreshedEvent event) {
-		if (null != composableRepository) {
+		if(null != composableRepository) {
 			return;
 		}
 		this.beanFactory = event.getApplicationContext();
 		repositories = new Repositories(this.beanFactory);
-		if (null != (delegateRepository = repositories.getRepositoryFor(domainType))) {
-			SimpleComposableCrudRepository<T, ID> repo = new SimpleComposableCrudRepository<T, ID>(env, dispatcher, delegateRepository);
+		if(null != (delegateRepository = (CrudRepository<T, ID>)repositories.getRepositoryFor(domainType))) {
+			SimpleComposableCrudRepository<T, ID> repo = new SimpleComposableCrudRepository<>(env,
+			                                                                                  dispatcher,
+			                                                                                  delegateRepository);
 
 			ProxyFactory proxyFactory = new ProxyFactory(repo);
 			proxyFactory.addInterface(repositoryType);
 			proxyFactory.addInterface(ComposableRepository.class);
 
-			proxyFactory.addAdvice(new QueryMethodExecutor<R, T, ID>(repositoryType));
+			proxyFactory.addAdvice(new QueryMethodExecutor<>(repositoryType));
 
-			composableRepository = (R) proxyFactory.getProxy();
+			composableRepository = (R)proxyFactory.getProxy();
 		}
 	}
 
@@ -91,10 +93,11 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 		return true;
 	}
 
-	private class QueryMethodExecutor<R extends ComposableCrudRepository<T, ID>, T, ID extends Serializable> implements MethodInterceptor {
-		private final Map<String, Method>     crudMethods  = new HashMap<String, Method>();
-		private final Map<String, Method>     queryMethods = new HashMap<String, Method>();
-		private final Map<String, Class<?>[]> paramTypes   = new HashMap<String, Class<?>[]>();
+	private class QueryMethodExecutor<R extends ComposableCrudRepository<T, ID>, T, ID extends Serializable>
+			implements MethodInterceptor {
+		private final Map<String, Method>     crudMethods  = new HashMap<>();
+		private final Map<String, Method>     queryMethods = new HashMap<>();
+		private final Map<String, Class<?>[]> paramTypes   = new HashMap<>();
 
 		private QueryMethodExecutor(Class<R> composableRepositoryType) {
 			doWithMethods(
@@ -107,12 +110,7 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 							QueryMethodExecutor.this.paramTypes.put(name, paramTypes);
 						}
 					},
-					new ReflectionUtils.MethodFilter() {
-						@Override
-						public boolean matches(Method method) {
-							return Object.class != method.getDeclaringClass() && !method.getName().contains("$");
-						}
-					}
+					method -> Object.class != method.getDeclaringClass() && !method.getName().contains("$")
 			);
 		}
 
@@ -124,26 +122,28 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 
 			try {
 				Method m;
-				if (null == (m = crudMethods.get(name))) {
-					if (null != (m = invocation.getThis().getClass().getDeclaredMethod(invocation.getMethod().getName(), paramTypes))) {
+				if(null == (m = crudMethods.get(name))) {
+					if(null != (m = invocation.getThis().getClass().getDeclaredMethod(invocation.getMethod().getName(),
+					                                                                  paramTypes))) {
 						crudMethods.put(name, m);
 					}
 				}
-				if (null != m) {
+				if(null != m) {
 					return m.invoke(invocation.getThis(), invocation.getArguments());
 				}
-			} catch (Exception e) {
-				if (NoSuchMethodException.class.isAssignableFrom(e.getClass())) {
+			} catch(Exception e) {
+				if(NoSuchMethodException.class.isAssignableFrom(e.getClass())) {
 					// this is probably a finder method
 					Method m;
-					if (null == (m = queryMethods.get(name))) {
-						if (null != (m = delegateRepository.getClass().getDeclaredMethod(invocation.getMethod().getName(), paramTypes))) {
+					if(null == (m = queryMethods.get(name))) {
+						if(null != (m = delegateRepository.getClass().getDeclaredMethod(invocation.getMethod().getName(),
+						                                                                paramTypes))) {
 							queryMethods.put(name, m);
 						}
 					}
-					if (null != m) {
+					if(null != m) {
 						Object result = m.invoke(delegateRepository, invocation.getArguments());
-							Deferred<Object, Stream<Object>> deferredStream = Streams.<Object>defer(result).env(env).get();
+						Deferred<Object, Stream<Object>> deferredStream = Streams.<Object>defer(result).env(env).get();
 						return deferredStream.compose();
 					}
 				}

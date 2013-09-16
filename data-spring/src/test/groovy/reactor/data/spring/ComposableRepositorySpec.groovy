@@ -12,6 +12,7 @@ import reactor.data.spring.test.ComposablePersonRepository
 import reactor.data.spring.test.Person
 import reactor.function.Consumer
 import reactor.function.Function
+import reactor.spring.context.config.EnableReactor
 import spock.lang.Specification
 
 import java.util.concurrent.CountDownLatch
@@ -48,7 +49,7 @@ class ComposableRepositorySpec extends Specification {
 
 		when: "an entity is saved"
 		def start = System.currentTimeMillis()
-		def entity = people.save(Promises.success(new Person(id: 1, name: "John Doe")).get())
+		def entity = people.save(Promises.success(new Person(id: 1, name: "John Doe")).get()).tap().get()
 
 		then: "entity has saved without timing out"
 		System.currentTimeMillis() - start < 5000
@@ -69,7 +70,7 @@ class ComposableRepositorySpec extends Specification {
 			println it
 			person = it
 			latch.countDown()
-		} as Consumer<Person>).resolve()
+		} as Consumer<Person>).flush()
 		latch.await(1, TimeUnit.SECONDS)
 
 		then: "entity should have a name property"
@@ -80,14 +81,10 @@ class ComposableRepositorySpec extends Specification {
 }
 
 @Configuration
+@EnableReactor
 @EnableMongoRepositories(basePackages = ["reactor.data.spring.test"])
 @EnableComposableRepositories(basePackages = ["reactor.data.spring.test"])
 class SpecConfig {
-
-	@Bean
-	Environment reactorEnv() {
-		return new Environment()
-	}
 
 	@Bean
 	MongoTemplate mongoTemplate() {

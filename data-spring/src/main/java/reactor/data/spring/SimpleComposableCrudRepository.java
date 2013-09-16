@@ -1,16 +1,20 @@
 package reactor.data.spring;
 
-import org.springframework.data.repository.CrudRepository;
-import reactor.Fn;
-import reactor.R;
-import reactor.core.Reactor;
-import reactor.core.Environment;
-import reactor.core.composable.*;
-import reactor.core.composable.Promises;
-import reactor.core.composable.Streams;
-import reactor.function.*;
-
 import java.io.Serializable;
+
+import org.springframework.data.repository.CrudRepository;
+import reactor.core.Environment;
+import reactor.core.Reactor;
+import reactor.core.composable.Composable;
+import reactor.core.composable.Deferred;
+import reactor.core.composable.Promise;
+import reactor.core.composable.Stream;
+import reactor.core.composable.spec.Promises;
+import reactor.core.composable.spec.Streams;
+import reactor.core.spec.Reactors;
+import reactor.event.Event;
+import reactor.function.Consumer;
+import reactor.tuple.Tuple;
 
 /**
  * @author Jon Brisbin
@@ -26,25 +30,20 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		this.env = env;
 		this.delegateRepository = delegateRepository;
 
-		this.reactor = R.reactor()
-										.env(env)
-										.dispatcher(dispatcher)
-										.get();
+		this.reactor = Reactors.reactor()
+		                       .env(env)
+		                       .dispatcher(dispatcher)
+		                       .get();
 	}
 
 	@Override
 	public <S extends T> Stream<S> save(Composable<S> entities) {
-		final Deferred<S,Stream<S>> s = Streams.<S>defer()
-															 .env(env)
-															 .dispatcher(reactor.getDispatcher())
-															 .get();
+		final Deferred<S, Stream<S>> s = Streams.<S>defer()
+		                                        .env(env)
+		                                        .dispatcher(reactor.getDispatcher())
+		                                        .get();
 
-		entities.consume(new Consumer<S>() {
-			@Override
-			public void accept(S entity) {
-				s.accept(delegateRepository.save(entity));
-			}
-		});
+		entities.consume(entity -> s.accept(delegateRepository.save(entity)));
 
 		return s.compose();
 	}
@@ -52,67 +51,51 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<T> findOne(ID id) {
 		return Promises.success(id)
-									 .env(env)
-									 .dispatcher(reactor.getDispatcher())
-									 .get()
-									 .map(new Function<ID, T>() {
-										 @Override
-										 public T apply(ID id) {
-											 return delegateRepository.findOne(id);
-										 }
-									 });
+		               .env(env)
+		               .dispatcher(reactor.getDispatcher())
+		               .get()
+		               .map(delegateRepository::findOne);
 	}
 
 	@Override
 	public Promise<Boolean> exists(ID id) {
 		return Promises.success(id)
-									 .env(env)
-									 .dispatcher(reactor.getDispatcher())
-									 .get()
-									 .map(new Function<ID, Boolean>() {
-										 @Override
-										 public Boolean apply(ID id) {
-											 return delegateRepository.exists(id);
-										 }
-									 });
+		               .env(env)
+		               .dispatcher(reactor.getDispatcher())
+		               .get()
+		               .map(delegateRepository::exists);
 	}
 
 	@Override
 	public Stream<T> findAll() {
-		final Deferred<T,Stream<T>> s = Streams.<T>defer()
-															 .env(env)
-															 .dispatcher(reactor.getDispatcher())
-															 .get();
+		final Deferred<T, Stream<T>> s = Streams.<T>defer()
+		                                        .env(env)
+		                                        .dispatcher(reactor.getDispatcher())
+		                                        .get();
 
-		Consumer<Void> consumer = new Consumer<Void>() {
-			@Override
-			public void accept(Void v) {
-				for (T t : delegateRepository.findAll()) {
-					s.accept(t);
-				}
+		Consumer<Void> consumer = v -> {
+			for(T t : delegateRepository.findAll()) {
+				s.accept(t);
 			}
 		};
-		Fn.schedule(consumer, null, reactor);
+		reactor.notify(Tuple.of(consumer, Event.NULL_EVENT));
 
 		return s.compose();
 	}
 
 	@Override
 	public Stream<T> findAll(final Iterable<ID> ids) {
-		final Deferred<T,Stream<T>> s = Streams.<T>defer()
-															 .env(env)
-															 .dispatcher(reactor.getDispatcher())
-															 .get();
+		final Deferred<T, Stream<T>> s = Streams.<T>defer()
+		                                        .env(env)
+		                                        .dispatcher(reactor.getDispatcher())
+		                                        .get();
 
-		Consumer<Void> consumer = new Consumer<Void>() {
-			@Override
-			public void accept(Void v) {
-				for (T t : delegateRepository.findAll(ids)) {
-					s.accept(t);
-				}
+		Consumer<Void> consumer = v -> {
+			for(T t : delegateRepository.findAll(ids)) {
+				s.accept(t);
 			}
 		};
-		Fn.schedule(consumer, null, reactor);
+		reactor.notify(Tuple.of(consumer, Event.NULL_EVENT));
 
 		return s.compose();
 	}
@@ -120,17 +103,12 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<Long> count() {
 		final Deferred<Long, Promise<Long>> p = Promises.<Long>defer()
-																		.env(env)
-																		.dispatcher(reactor.getDispatcher())
-																		.get();
+		                                                .env(env)
+		                                                .dispatcher(reactor.getDispatcher())
+		                                                .get();
 
-		Consumer<Void> consumer = new Consumer<Void>() {
-			@Override
-			public void accept(Void v) {
-				p.accept(delegateRepository.count());
-			}
-		};
-		Fn.schedule(consumer, null, reactor);
+		Consumer<Void> consumer = v -> p.accept(delegateRepository.count());
+		reactor.notify(Tuple.of(consumer, Event.NULL_EVENT));
 
 		return p.compose();
 	}
@@ -138,32 +116,26 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<Void> delete(ID id) {
 		return Promises.success(id)
-									 .env(env)
-									 .dispatcher(reactor.getDispatcher())
-									 .get()
-									 .map(new Function<ID, Void>() {
-										 @Override
-										 public Void apply(ID id) {
-											 delegateRepository.delete(id);
-											 return null;
-										 }
-									 });
+		               .env(env)
+		               .dispatcher(reactor.getDispatcher())
+		               .get()
+		               .map(i -> {
+			               delegateRepository.delete(i);
+			               return null;
+		               });
 	}
 
 	@Override
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	public Promise<Void> delete(Composable<? extends T> entities) {
 		final Deferred<Void, Promise<Void>> p = Promises.<Void>defer()
-																		.env(env)
-																		.dispatcher(reactor.getDispatcher())
-																		.get();
+		                                                .env(env)
+		                                                .dispatcher(reactor.getDispatcher())
+		                                                .get();
 
-		entities.consume(new Consumer() {
-			@Override
-			public void accept(Object o) {
-				delegateRepository.delete((T) o);
-				p.accept((Void) null);
-			}
+		entities.consume(o -> {
+			delegateRepository.delete(o);
+			p.accept((Void)null);
 		});
 		return p.compose();
 	}
@@ -171,18 +143,15 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 	@Override
 	public Promise<Void> deleteAll() {
 		final Deferred<Void, Promise<Void>> c = Promises.<Void>defer()
-																		.env(env)
-																		.dispatcher(reactor.getDispatcher())
-																		.get();
+		                                                .env(env)
+		                                                .dispatcher(reactor.getDispatcher())
+		                                                .get();
 
-		Consumer<Void> consumer = new Consumer<Void>() {
-			@Override
-			public void accept(Void aVoid) {
-				delegateRepository.deleteAll();
-				c.accept((Void) null);
-			}
+		Consumer<Void> consumer = v -> {
+			delegateRepository.deleteAll();
+			c.accept((Void)null);
 		};
-		Fn.schedule(consumer, null, reactor);
+		reactor.notify(Tuple.of(consumer, Event.NULL_EVENT));
 
 		return c.compose();
 	}
