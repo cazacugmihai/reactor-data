@@ -22,7 +22,7 @@ import reactor.core.Environment;
 import reactor.core.HashWheelTimer;
 import reactor.core.composable.Deferred;
 import reactor.core.composable.Stream;
-import reactor.core.composable.Streams;
+import reactor.core.composable.spec.Streams;
 
 /**
  * @author Jon Brisbin
@@ -149,8 +149,7 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 						}
 					}
 					if(null != m) {
-						Object result = m.invoke(delegateRepository, invocation.getArguments());
-						Deferred<Object, Stream<Object>> d = Streams.<Object>defer(result)
+						Deferred<Object, Stream<Object>> d = Streams.<Object>defer()
 						                                            .env(env)
 						                                            .dispatcher(dispatcher)
 						                                            .get();
