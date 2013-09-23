@@ -84,7 +84,7 @@ allprojects {
     exclude '**/*Abstract*.*'
   }
 
-  group = 'reactor.data'
+  group = 'org.projectreactor.data'
   repositories {
     mavenCentral()
     maven { url 'http://repo.spring.io/libs-snapshot' }
@@ -120,7 +120,7 @@ project('data-spring') {
     // Spring Data
     compile "org.springframework.data:spring-data-commons:$sdCommonsVersion"
     compile("org.springframework.data:spring-data-mongodb:$sdMongoVersion", optional)
-    compile("org.springframework.data:spring-data-couchbase:$sdCouchbaseVersion", optional)
+    //compile("org.springframework.data:spring-data-couchbase:$sdCouchbaseVersion", optional)
 
     // Reactor
     compile "org.projectreactor:reactor-spring:$reactorVersion"
