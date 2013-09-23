@@ -73,7 +73,6 @@ allprojects {
   compileTestJava {
     sourceCompatibility = 1.7
     targetCompatibility = 1.7
-    compileTestJava.options.compilerArgs += "-parameters"
   }
 
   test {
