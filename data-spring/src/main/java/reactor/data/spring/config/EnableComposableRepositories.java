@@ -19,7 +19,7 @@ public @interface EnableComposableRepositories {
 	String[] value() default {};
 
 	/**
-	 * The name of the {@link reactor.fn.dispatch.Dispatcher} implementation to use.
+	 * The name of the {@link reactor.event.dispatch.Dispatcher} implementation to use.
 	 */
 	String dispatcher() default "ringBuffer";
 

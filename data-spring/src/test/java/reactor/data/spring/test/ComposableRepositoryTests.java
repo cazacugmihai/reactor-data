@@ -1,12 +1,5 @@
 package reactor.data.spring.test;
 
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
-import static org.springframework.test.util.AssertionErrors.*;
-
-import java.net.UnknownHostException;
-import java.util.concurrent.TimeUnit;
-
 import com.mongodb.Mongo;
 import org.junit.Before;
 import org.junit.Test;
@@ -20,12 +13,22 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import reactor.core.Environment;
 import reactor.core.composable.Promise;
 import reactor.core.composable.spec.Promises;
 import reactor.data.spring.config.EnableComposableRepositories;
+import reactor.function.Consumer;
 import reactor.function.support.Boundary;
 import reactor.function.support.Tap;
 import reactor.spring.context.config.EnableReactor;
+
+import java.net.UnknownHostException;
+import java.util.concurrent.TimeUnit;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.test.util.AssertionErrors.assertTrue;
 
 /**
  * @author Jon Brisbin
@@ -50,7 +53,12 @@ public class ComposableRepositoryTests {
 	@Test
 	public void savesEntities() {
 		Tap<Person> t = people.save(personPromise)
-		                      .consume(b.bind(p -> LOG.info("Saved person {}", p)))
+		                      .consume(b.bind(new Consumer<Person>() {
+			                      @Override
+			                      public void accept(Person p) {
+				                      LOG.info("Saved person {}", p);
+			                      }
+		                      }))
 		                      .tap();
 		assertTrue("Person was saved within the timeout", b.await(1, TimeUnit.SECONDS));
 		assertThat("Person was actually saved to the database", t.get().getId(), notNullValue());
@@ -59,20 +67,43 @@ public class ComposableRepositoryTests {
 	@Test
 	public void deletesEntities() throws InterruptedException {
 		Tap<Person> t = people.save(personPromise)
-		                      .consume(b.bind(p -> LOG.info("Saved person {}", p)))
+		                      .consume(b.bind(new Consumer<Person>() {
+			                      @Override
+			                      public void accept(Person p) {
+				                      LOG.info("Saved person {}", p);
+			                      }
+		                      }))
 		                      .tap();
 		assertTrue("Person was saved within the timeout", b.await(1, TimeUnit.SECONDS));
 		assertThat("Person was actually saved to the database", t.get().getId(), notNullValue());
 
 		Promise<Person> p2 = people.delete(t.get().getId())
-		                           .onSuccess(b.<Person>bind(p3 -> LOG.info("Deleted person {}", p3)));
+		                           .onSuccess(b.<Person>bind(new Consumer<Person>() {
+			                           @Override
+			                           public void accept(Person p) {
+				                           LOG.info("Deleted person {}", p);
+			                           }
+		                           }));
 		assertThat("Person was deleted within the timeout", p2.await(1, TimeUnit.SECONDS), notNullValue());
 	}
 
 	@Test
 	public void queriesEntities() {
+		people.save(personPromise)
+		      .consume(b.bind(new Consumer<Person>() {
+			      @Override
+			      public void accept(Person p) {
+				      LOG.info("Saved person {}", p);
+			      }
+		      }));
+
 		Tap<Person> t = people.findByName("John Doe")
-		                      .consume(b.bind(p -> LOG.info("Found person {}", p)))
+		                      .consume(b.bind(new Consumer<Person>() {
+			                      @Override
+			                      public void accept(Person p) {
+				                      LOG.info("Found person {}", p);
+			                      }
+		                      }))
 		                      .tap();
 		assertTrue("Person was queried within the timeout", b.await(1, TimeUnit.SECONDS));
 		assertThat("Person was actually actually queried", t.get().getId(), notNullValue());
@@ -83,10 +114,11 @@ public class ComposableRepositoryTests {
 	@Configuration
 	@EnableReactor
 	@EnableMongoRepositories(basePackages = {"reactor.data.spring.test"})
-	@EnableComposableRepositories(basePackages = {"reactor.data.spring.test"})
+	@EnableComposableRepositories(basePackages = {"reactor.data.spring.test"}, dispatcher = Environment.RING_BUFFER)
 	static class TestConfig {
 
-		@Bean MongoTemplate mongoTemplate() throws UnknownHostException {
+		@Bean
+		MongoTemplate mongoTemplate() throws UnknownHostException {
 			return new MongoTemplate(new Mongo(), "reactor");
 		}
 
