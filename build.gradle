@@ -16,7 +16,7 @@
 description = 'Reactor Data components'
 
 ext {
-  gradleVersion = '1.8-rc-1'
+  gradleVersion = '1.7'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
   // Logging
