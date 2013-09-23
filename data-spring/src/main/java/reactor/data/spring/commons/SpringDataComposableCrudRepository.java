@@ -1,6 +1,7 @@
-package reactor.data.spring;
+package reactor.data.spring.commons;
 
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.support.Repositories;
 import reactor.core.Environment;
 import reactor.core.HashWheelTimer;
 import reactor.core.Reactor;
@@ -11,6 +12,7 @@ import reactor.core.composable.Stream;
 import reactor.core.composable.spec.Promises;
 import reactor.core.composable.spec.Streams;
 import reactor.core.spec.Reactors;
+import reactor.data.core.ComposableCrudRepository;
 import reactor.function.Consumer;
 
 import java.io.Serializable;
@@ -19,20 +21,24 @@ import java.io.Serializable;
  * @author Jon Brisbin
  * @author Stephane Maldini
  */
-class SimpleComposableCrudRepository<T, ID extends Serializable> implements ComposableCrudRepository<T, ID> {
+class SpringDataComposableCrudRepository<T, ID extends Serializable> implements ComposableCrudRepository<T, ID> {
 
 	private final Environment           env;
 	private final HashWheelTimer        timer;
-	private final CrudRepository<T, ID> delegateRepository;
 	private final Reactor               reactor;
+	private final Repositories          repositories;
+	private final Class<?>              managedType;
+	private       CrudRepository<T, ID> delegateRepository;
 
-	SimpleComposableCrudRepository(Environment env,
-	                               String dispatcher,
-	                               HashWheelTimer timer,
-	                               CrudRepository<T, ID> delegateRepository) {
+	SpringDataComposableCrudRepository(Environment env,
+	                                   String dispatcher,
+	                                   HashWheelTimer timer,
+	                                   Repositories repositories,
+	                                   Class<?> managedType) {
 		this.env = env;
 		this.timer = timer;
-		this.delegateRepository = delegateRepository;
+		this.repositories = repositories;
+		this.managedType = managedType;
 
 		this.reactor = Reactors.reactor()
 		                       .env(env)
@@ -54,7 +60,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 					((Promise<S>) entities).onSuccess(new Consumer<S>() {
 						@Override
 						public void accept(S s) {
-							d.accept(delegateRepository.save(s));
+							d.accept(getDelegateRepository().save(s));
 						}
 					}).onError(new Consumer<Throwable>() {
 						@Override
@@ -66,7 +72,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 					entities.consume(new Consumer<S>() {
 						@Override
 						public void accept(S s) {
-							d.accept(delegateRepository.save(s));
+							d.accept(getDelegateRepository().save(s));
 						}
 					});
 				}
@@ -86,7 +92,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		timer.submit(new Consumer<Long>() {
 			@Override
 			public void accept(Long l) {
-				d.accept(delegateRepository.findOne(id));
+				d.accept(getDelegateRepository().findOne(id));
 			}
 		});
 
@@ -103,7 +109,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		timer.submit(new Consumer<Long>() {
 			@Override
 			public void accept(Long l) {
-				d.accept(delegateRepository.exists(id));
+				d.accept(getDelegateRepository().exists(id));
 			}
 		});
 
@@ -120,7 +126,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		timer.submit(new Consumer<Long>() {
 			@Override
 			public void accept(Long l) {
-				for (T t : delegateRepository.findAll()) {
+				for (T t : getDelegateRepository().findAll()) {
 					d.accept(t);
 				}
 			}
@@ -139,7 +145,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		timer.submit(new Consumer<Long>() {
 			@Override
 			public void accept(Long l) {
-				for (T t : delegateRepository.findAll(ids)) {
+				for (T t : getDelegateRepository().findAll(ids)) {
 					d.accept(t);
 				}
 			}
@@ -158,7 +164,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		timer.submit(new Consumer<Long>() {
 			@Override
 			public void accept(Long l) {
-				d.accept(delegateRepository.count());
+				d.accept(getDelegateRepository().count());
 			}
 		});
 
@@ -175,8 +181,8 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		timer.submit(new Consumer<Long>() {
 			@Override
 			public void accept(Long l) {
-				T t = delegateRepository.findOne(id);
-				delegateRepository.delete(id);
+				T t = getDelegateRepository().findOne(id);
+				getDelegateRepository().delete(id);
 				d.accept(t);
 			}
 		});
@@ -199,7 +205,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 					((Promise<T>) entities).onSuccess(new Consumer<T>() {
 						@Override
 						public void accept(T t) {
-							delegateRepository.delete(t);
+							getDelegateRepository().delete(t);
 							d.accept((Void) null);
 						}
 					}).onError(new Consumer<Throwable>() {
@@ -212,7 +218,7 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 					((Stream<T>) entities).consume(new Consumer<T>() {
 						@Override
 						public void accept(T t) {
-							delegateRepository.delete(t);
+							getDelegateRepository().delete(t);
 						}
 					});
 				}
@@ -232,12 +238,22 @@ class SimpleComposableCrudRepository<T, ID extends Serializable> implements Comp
 		timer.submit(new Consumer<Long>() {
 			@Override
 			public void accept(Long l) {
-				delegateRepository.deleteAll();
+				getDelegateRepository().deleteAll();
 				d.accept((Void) null);
 			}
 		});
 
 		return d.compose();
+	}
+
+	@SuppressWarnings("unchecked")
+	CrudRepository<T, ID> getDelegateRepository() {
+		synchronized (this) {
+			if (null == delegateRepository) {
+				delegateRepository = (CrudRepository<T, ID>) repositories.getRepositoryFor(managedType);
+			}
+			return delegateRepository;
+		}
 	}
 
 }

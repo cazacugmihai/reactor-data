@@ -16,6 +16,9 @@ import reactor.core.HashWheelTimer;
 import reactor.core.composable.Deferred;
 import reactor.core.composable.Stream;
 import reactor.core.composable.spec.Streams;
+import reactor.data.core.ComposableCrudRepository;
+import reactor.data.core.ComposableRepository;
+//import reactor.data.spring.commons.SimpleComposableCrudRepository;
 import reactor.function.Consumer;
 
 import java.io.Serializable;
@@ -63,6 +66,7 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		if (null != composableRepository) {
@@ -71,18 +75,18 @@ public class ComposableRepositoryFactoryBean<R extends ComposableCrudRepository<
 		this.beanFactory = applicationContext;
 		repositories = new Repositories(this.beanFactory);
 		if (null != (delegateRepository = (CrudRepository<T, ID>) repositories.getRepositoryFor(domainType))) {
-			SimpleComposableCrudRepository<T, ID> repo = new SimpleComposableCrudRepository<>(env,
-			                                                                                  dispatcher,
-			                                                                                  timer,
-			                                                                                  delegateRepository);
-
-			ProxyFactory proxyFactory = new ProxyFactory(repo);
-			proxyFactory.addInterface(repositoryType);
-			proxyFactory.addInterface(ComposableRepository.class);
-
-			proxyFactory.addAdvice(new QueryMethodExecutor<>(repositoryType));
-
-			composableRepository = (R) proxyFactory.getProxy();
+//			SimpleComposableCrudRepository<T, ID> repo = new SimpleComposableCrudRepository<>(env,
+//			                                                                                  dispatcher,
+//			                                                                                  timer,
+//			                                                                                  delegateRepository);
+//
+//			ProxyFactory proxyFactory = new ProxyFactory(repo);
+//			proxyFactory.addInterface(repositoryType);
+//			proxyFactory.addInterface(ComposableRepository.class);
+//
+//			proxyFactory.addAdvice(new QueryMethodExecutor<>(repositoryType));
+//
+//			composableRepository = (R) proxyFactory.getProxy();
 		}
 	}
 

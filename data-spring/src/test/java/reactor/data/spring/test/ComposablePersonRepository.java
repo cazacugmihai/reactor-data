@@ -1,7 +1,7 @@
 package reactor.data.spring.test;
 
 import reactor.core.composable.Stream;
-import reactor.data.spring.ComposableCrudRepository;
+import reactor.data.core.ComposableCrudRepository;
 
 /**
  * @author Jon Brisbin

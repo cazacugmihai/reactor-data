@@ -1,7 +1,5 @@
 package reactor.data.spring.config;
 
-import java.util.Map;
-
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -11,12 +9,17 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.ClassMetadata;
+import org.springframework.core.type.filter.AbstractClassTestingTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
-import org.springframework.util.ClassUtils;
 import reactor.core.Environment;
-import reactor.data.spring.ComposableRepository;
-import reactor.data.spring.ComposableRepositoryFactoryBean;
+import reactor.data.spring.AbstractComposableRepositoryBeanDefinitionRegistryPostProcessor;
 import reactor.spring.beans.factory.HashWheelTimerFactoryBean;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Jon Brisbin
@@ -25,8 +28,8 @@ public class ComposableRepositoryBeanDefinitionRegistrar
 		implements ImportBeanDefinitionRegistrar,
 		           ResourceLoaderAware {
 
-	private static final String REACTOR_ENV = "reactorEnv";
-	private static final String TIMER_BEAN  = "reactorHashWheelTimer";
+	public static final String REACTOR_ENV = "reactorEnv";
+	public static final String TIMER_BEAN  = "reactorHashWheelTimer";
 
 	private final ClassLoader classLoader = getClass().getClassLoader();
 	private ResourceLoader resourceLoader;
@@ -41,30 +44,45 @@ public class ComposableRepositoryBeanDefinitionRegistrar
 
 		Map<String, Object> attrs = meta.getAnnotationAttributes(EnableComposableRepositories.class.getName());
 
-		ClassPathScanningCandidateComponentProvider provider = new ClassPathScanningCandidateComponentProvider(false) {
-			@Override
-			protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
-				return beanDefinition.getMetadata().isIndependent();
-			}
-		};
-		provider.addIncludeFilter(new AssignableTypeFilter(ComposableRepository.class));
-		provider.setResourceLoader(resourceLoader);
+		ClassPathScanningCandidateComponentProvider postProcessors =
+				new ClassPathScanningCandidateComponentProvider(false) {
+					@Override
+					protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
+						return beanDefinition.getMetadata().isIndependent();
+					}
+				};
+		postProcessors.addIncludeFilter(
+				new AssignableTypeFilter(AbstractComposableRepositoryBeanDefinitionRegistryPostProcessor.class)
+		);
+		postProcessors.addExcludeFilter(
+				new AbstractClassTestingTypeFilter() {
+					@Override
+					protected boolean match(ClassMetadata metadata) {
+						return metadata.getClassName()
+						               .equals(AbstractComposableRepositoryBeanDefinitionRegistryPostProcessor.class.getName());
+					}
+				}
+		);
+		postProcessors.setResourceLoader(resourceLoader);
 
-		String[] basePackages = (String[])attrs.get("basePackages");
-		if(basePackages.length == 0) {
-			String s = "";
+		List<String> packagesToScan = new ArrayList<>();
+		packagesToScan.add("reactor.data.spring");
+
+		String[] basePackages = (String[]) attrs.get("basePackages");
+		if (basePackages.length == 0) {
 			try {
-				s = Class.forName(meta.getClassName()).getPackage().getName();
-			} catch(ClassNotFoundException e) {
+				String s = Class.forName(meta.getClassName()).getPackage().getName();
+				basePackages = new String[]{s};
+			} catch (ClassNotFoundException e) {
 			}
-			basePackages = new String[]{s};
 		}
+		Collections.addAll(packagesToScan, basePackages);
 
-		if(!registry.containsBeanDefinition(REACTOR_ENV)) {
+		if (!registry.containsBeanDefinition(REACTOR_ENV)) {
 			BeanDefinitionBuilder envBeanDef = BeanDefinitionBuilder.rootBeanDefinition(Environment.class);
 			registry.registerBeanDefinition(REACTOR_ENV, envBeanDef.getBeanDefinition());
 		}
-		if(!registry.containsBeanDefinition(TIMER_BEAN)) {
+		if (!registry.containsBeanDefinition(TIMER_BEAN)) {
 			BeanDefinitionBuilder envBeanDef = BeanDefinitionBuilder.rootBeanDefinition(HashWheelTimerFactoryBean.class);
 			envBeanDef.addConstructorArgValue(Environment.PROCESSORS);
 			envBeanDef.addConstructorArgValue(50);
@@ -73,15 +91,16 @@ public class ComposableRepositoryBeanDefinitionRegistrar
 
 		String dispatcher = attrs.get("dispatcher").toString();
 
-		for(String basePackage : basePackages) {
-			for(BeanDefinition beanDef : provider.findCandidateComponents(basePackage)) {
+		for (String basePackage : packagesToScan) {
+			for (BeanDefinition beanDef : postProcessors.findCandidateComponents(basePackage)) {
 				BeanDefinitionBuilder factoryBeanDef = BeanDefinitionBuilder.rootBeanDefinition(
-						ComposableRepositoryFactoryBean.class.getName()
+						beanDef.getBeanClassName()
 				);
+
 				factoryBeanDef.addConstructorArgReference(REACTOR_ENV);
 				factoryBeanDef.addConstructorArgValue(dispatcher);
 				factoryBeanDef.addConstructorArgReference(TIMER_BEAN);
-				factoryBeanDef.addConstructorArgValue(ClassUtils.resolveClassName(beanDef.getBeanClassName(), classLoader));
+				factoryBeanDef.addConstructorArgValue(basePackages);
 
 				registry.registerBeanDefinition(beanDef.getBeanClassName(), factoryBeanDef.getBeanDefinition());
 			}
