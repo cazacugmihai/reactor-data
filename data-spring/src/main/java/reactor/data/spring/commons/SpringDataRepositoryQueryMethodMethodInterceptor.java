@@ -4,16 +4,15 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.util.ReflectionUtils;
 import reactor.core.Environment;
-import reactor.core.HashWheelTimer;
 import reactor.core.composable.Deferred;
 import reactor.core.composable.Stream;
 import reactor.core.composable.spec.Streams;
-import reactor.function.Consumer;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import static org.springframework.util.ReflectionUtils.doWithMethods;
 
@@ -24,20 +23,22 @@ public class SpringDataRepositoryQueryMethodMethodInterceptor<V, K extends Seria
 
 	private final Environment                              env;
 	private final String                                   dispatcher;
-	private final HashWheelTimer                           timer;
+	private final Executor                                 executor;
 	private final SpringDataComposableCrudRepository<V, K> compRepo;
 	private final Map<String, Method>     crudMethods  = new HashMap<>();
 	private final Map<String, Method>     queryMethods = new HashMap<>();
 	private final Map<String, Class<?>[]> paramTypes   = new HashMap<>();
 
-	public SpringDataRepositoryQueryMethodMethodInterceptor(Environment env,
-	                                                        String dispatcher,
-	                                                        HashWheelTimer timer,
-	                                                        Class<?> compRepoType,
-	                                                        SpringDataComposableCrudRepository<V, K> compRepo) {
+	public SpringDataRepositoryQueryMethodMethodInterceptor(
+			Environment env,
+			String dispatcher,
+			Executor executor,
+			Class<?> compRepoType,
+			SpringDataComposableCrudRepository<V, K> compRepo
+	) {
 		this.env = env;
 		this.dispatcher = dispatcher;
-		this.timer = timer;
+		this.executor = executor;
 		this.compRepo = compRepo;
 
 		doWithMethods(
@@ -66,37 +67,37 @@ public class SpringDataRepositoryQueryMethodMethodInterceptor<V, K extends Seria
 
 		try {
 			Method m;
-			if (null == (m = crudMethods.get(name))) {
-				if (null != (m = invocation.getThis()
-				                           .getClass()
-				                           .getDeclaredMethod(invocation.getMethod().getName(), paramTypes))) {
+			if(null == (m = crudMethods.get(name))) {
+				if(null != (m = invocation.getThis()
+				                          .getClass()
+				                          .getDeclaredMethod(invocation.getMethod().getName(), paramTypes))) {
 					crudMethods.put(name, m);
 				}
 			}
-			if (null != m) {
+			if(null != m) {
 				return m.invoke(invocation.getThis(), invocation.getArguments());
 			}
-		} catch (Exception e) {
-			if (NoSuchMethodException.class.isAssignableFrom(e.getClass())) {
+		} catch(Exception e) {
+			if(NoSuchMethodException.class.isAssignableFrom(e.getClass())) {
 				// this is probably a finder method
 				Method m;
-				if (null == (m = queryMethods.get(name))) {
-					if (null != (m = compRepo.getDelegateRepository()
-					                         .getClass()
-					                         .getDeclaredMethod(invocation.getMethod().getName(), paramTypes))) {
+				if(null == (m = queryMethods.get(name))) {
+					if(null != (m = compRepo.getDelegateRepository()
+					                        .getClass()
+					                        .getDeclaredMethod(invocation.getMethod().getName(), paramTypes))) {
 						queryMethods.put(name, m);
 					}
 				}
-				if (null != m) {
+				if(null != m) {
 					final Deferred<Object, Stream<Object>> d = Streams.<Object>defer()
 					                                                  .env(env)
 					                                                  .dispatcher(dispatcher)
 					                                                  .get();
 
 					final Method queryMethod = m;
-					timer.submit(new Consumer<Long>() {
+					executor.execute(new Runnable() {
 						@Override
-						public void accept(Long l) {
+						public void run() {
 							Object returnVal = ReflectionUtils.invokeMethod(queryMethod,
 							                                                compRepo.getDelegateRepository(),
 							                                                invocation.getArguments());

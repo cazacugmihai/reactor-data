@@ -7,14 +7,14 @@ import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.data.repository.support.Repositories;
 import reactor.core.Environment;
-import reactor.core.HashWheelTimer;
 import reactor.data.core.ComposableCrudRepository;
 import reactor.data.core.ComposableRepository;
-import reactor.data.spring.AbstractComposableRepositoryBeanDefinitionRegistryPostProcessor;
+import reactor.data.spring.AbstractComposableRepositoryPostProcessor;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.springframework.core.GenericTypeResolver.resolveTypeArguments;
@@ -22,8 +22,8 @@ import static org.springframework.core.GenericTypeResolver.resolveTypeArguments;
 /**
  * @author Jon Brisbin
  */
-public class SpringDataComposableCrudRepositoryBeanDefinitionRegistryPostProcessor<T, K extends Serializable>
-		extends AbstractComposableRepositoryBeanDefinitionRegistryPostProcessor<ComposableCrudRepository<T, K>>
+public class SpringDataComposableCrudRepositoryPostProcessor<T, K extends Serializable>
+		extends AbstractComposableRepositoryPostProcessor<ComposableCrudRepository<T, K>>
 		implements BeanFactoryAware {
 
 	private final ReentrantLock repoLock = new ReentrantLock();
@@ -32,18 +32,20 @@ public class SpringDataComposableCrudRepositoryBeanDefinitionRegistryPostProcess
 	private ComposableCrudRepository<T, K> composableRepo;
 
 
-	public SpringDataComposableCrudRepositoryBeanDefinitionRegistryPostProcessor(Environment env,
-	                                                                             String dispatcher,
-	                                                                             HashWheelTimer timer,
-	                                                                             String[] basePackages) {
-		super(env, dispatcher, timer, basePackages);
+	public SpringDataComposableCrudRepositoryPostProcessor(
+			Environment env,
+			String dispatcher,
+			Executor executor,
+			String[] basePackages
+	) {
+		super(env, dispatcher, executor, basePackages);
 	}
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-		if (beanFactory instanceof ListableBeanFactory) {
-			this.beanFactory = (ListableBeanFactory) beanFactory;
-			this.repositories = new Repositories((ListableBeanFactory) beanFactory);
+		if(beanFactory instanceof ListableBeanFactory) {
+			this.beanFactory = (ListableBeanFactory)beanFactory;
+			this.repositories = new Repositories((ListableBeanFactory)beanFactory);
 		}
 	}
 
@@ -58,13 +60,13 @@ public class SpringDataComposableCrudRepositoryBeanDefinitionRegistryPostProcess
 	protected ComposableCrudRepository<T, K> getRepositoryProxy(Class<ComposableCrudRepository<T, K>> repoType) {
 		repoLock.lock();
 		try {
-			if (null != composableRepo) {
+			if(null != composableRepo) {
 				return composableRepo;
 			}
 
 			Class<?> managedType = null;
-			for (Class<?> intfType : repoType.getInterfaces()) {
-				if (!ComposableRepository.class.isAssignableFrom(intfType)) {
+			for(Class<?> intfType : repoType.getInterfaces()) {
+				if(!ComposableRepository.class.isAssignableFrom(intfType)) {
 					continue;
 				}
 				Class<?>[] types = resolveTypeArguments(repoType, ComposableRepository.class);
@@ -72,13 +74,13 @@ public class SpringDataComposableCrudRepositoryBeanDefinitionRegistryPostProcess
 				break;
 			}
 
-			if (null == managedType) {
+			if(null == managedType) {
 				return null;
 			}
 
 			return (composableRepo = new SpringDataComposableCrudRepository<>(getEnvironment(),
 			                                                                  getDispatcher(),
-			                                                                  getTimer(),
+			                                                                  getExecutor(),
 			                                                                  repositories,
 			                                                                  managedType));
 		} finally {
@@ -88,13 +90,15 @@ public class SpringDataComposableCrudRepositoryBeanDefinitionRegistryPostProcess
 
 	@SuppressWarnings("unchecked")
 	@Override
-	protected List<Advice> getAdvice(Class<ComposableCrudRepository<T, K>> repoType,
-	                                 ComposableCrudRepository<T, K> repo) {
+	protected List<Advice> getAdvice(
+			Class<ComposableCrudRepository<T, K>> repoType,
+			ComposableCrudRepository<T, K> repo
+	) {
 		return Arrays.<Advice>asList(new SpringDataRepositoryQueryMethodMethodInterceptor<>(getEnvironment(),
 		                                                                                    getDispatcher(),
-		                                                                                    getTimer(),
+		                                                                                    getExecutor(),
 		                                                                                    repoType,
-		                                                                                    (SpringDataComposableCrudRepository<Object, Serializable>) repo));
+		                                                                                    (SpringDataComposableCrudRepository<Object, Serializable>)repo));
 	}
 
 

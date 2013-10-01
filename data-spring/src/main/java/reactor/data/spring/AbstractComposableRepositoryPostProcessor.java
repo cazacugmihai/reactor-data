@@ -13,32 +13,34 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import reactor.core.Environment;
-import reactor.core.HashWheelTimer;
 import reactor.data.core.ComposableRepository;
 
 import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  * @author Jon Brisbin
  */
-public abstract class AbstractComposableRepositoryBeanDefinitionRegistryPostProcessor<T>
+public abstract class AbstractComposableRepositoryPostProcessor<T>
 		implements BeanDefinitionRegistryPostProcessor,
 		           ResourceLoaderAware {
 
-	private final Environment    env;
-	private final String         dispatcher;
-	private final HashWheelTimer timer;
+	private final Environment env;
+	private final String      dispatcher;
+	private final Executor    executor;
 
 	private final String[]       basePackages;
 	private       ResourceLoader resourceLoader;
 
-	protected AbstractComposableRepositoryBeanDefinitionRegistryPostProcessor(Environment env,
-	                                                                          String dispatcher,
-	                                                                          HashWheelTimer timer,
-	                                                                          String[] basePackages) {
+	protected AbstractComposableRepositoryPostProcessor(
+			Environment env,
+			String dispatcher,
+			Executor executor,
+			String[] basePackages
+	) {
 		this.env = env;
 		this.dispatcher = dispatcher;
-		this.timer = timer;
+		this.executor = executor;
 		this.basePackages = basePackages;
 	}
 
@@ -50,8 +52,8 @@ public abstract class AbstractComposableRepositoryBeanDefinitionRegistryPostProc
 		return dispatcher;
 	}
 
-	public HashWheelTimer getTimer() {
-		return timer;
+	public Executor getExecutor() {
+		return executor;
 	}
 
 	@Override
@@ -75,16 +77,16 @@ public abstract class AbstractComposableRepositoryBeanDefinitionRegistryPostProc
 		scanner.addIncludeFilter(new AssignableTypeFilter(getRepositoryType()));
 		scanner.setResourceLoader(resourceLoader);
 
-		for (String basePackage : basePackages) {
-			for (BeanDefinition beanDef : scanner.findCandidateComponents(basePackage)) {
-				if (beanFactory.containsBean(beanDef.getBeanClassName())) {
+		for(String basePackage : basePackages) {
+			for(BeanDefinition beanDef : scanner.findCandidateComponents(basePackage)) {
+				if(beanFactory.containsBean(beanDef.getBeanClassName())) {
 					continue;
 				}
 
 				Class<T> repoType;
 				try {
-					repoType = (Class<T>) Class.forName(beanDef.getBeanClassName());
-				} catch (ClassNotFoundException e) {
+					repoType = (Class<T>)Class.forName(beanDef.getBeanClassName());
+				} catch(ClassNotFoundException e) {
 					throw new IllegalStateException(e);
 				}
 
@@ -95,8 +97,8 @@ public abstract class AbstractComposableRepositoryBeanDefinitionRegistryPostProc
 				pf.addInterface(ComposableRepository.class);
 
 				List<Advice> advice = getAdvice(repoType, repo);
-				if (null != advice) {
-					for (Advice ad : advice) {
+				if(null != advice) {
+					for(Advice ad : advice) {
 						pf.addAdvice(ad);
 					}
 				}
