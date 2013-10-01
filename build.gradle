@@ -30,7 +30,7 @@ ext {
   sdCouchbaseVersion = '1.0.0.M1'
 
   // Reactor
-  reactorVersion = '1.0.0.BUILD-SNAPSHOT'
+  reactorVersion = '1.0.0.RC1'
 }
 
 apply from: "$gradleScriptDir/setup.gradle"
