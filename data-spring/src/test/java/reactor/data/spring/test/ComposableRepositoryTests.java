@@ -1,5 +1,6 @@
 package reactor.data.spring.test;
 
+import com.lambdaworks.redis.RedisClient;
 import com.mongodb.Mongo;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,8 +27,7 @@ import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.util.AssertionErrors.assertTrue;
 
 /**
@@ -41,6 +41,8 @@ public class ComposableRepositoryTests {
 
 	@Autowired
 	ComposablePersonRepository people;
+	@Autowired
+	GlobalCounters             counters;
 	Boundary        b;
 	Promise<Person> personPromise;
 
@@ -110,6 +112,20 @@ public class ComposableRepositoryTests {
 		assertThat("Person was actually actually queried", t.get().getName(), is("John Doe"));
 	}
 
+	@Test
+	public void manipulatesCounters() throws InterruptedException {
+		int times = 10;
+		for(int i = 0; i < times; i++) {
+			counters.incr("test");
+		}
+
+		// Make sure everything got updated
+		Thread.sleep(500);
+
+		Promise<Long> p = counters.get("test");
+		assertThat("Counter was incremented", p.await(1, TimeUnit.SECONDS), greaterThan(9l));
+		System.out.println("count: " + p.get());
+	}
 
 	@Configuration
 	@EnableReactor
@@ -120,6 +136,11 @@ public class ComposableRepositoryTests {
 		@Bean
 		MongoTemplate mongoTemplate() throws UnknownHostException {
 			return new MongoTemplate(new Mongo(), "reactor");
+		}
+
+		@Bean
+		RedisClient redisClient() {
+			return new RedisClient("localhost");
 		}
 
 	}
