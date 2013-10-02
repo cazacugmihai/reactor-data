@@ -127,18 +127,38 @@ public class ComposableRepositoryTests {
 		// Make sure everything got updated
 		Thread.sleep(500);
 
-		Promise<Long> p = counters.get("test");
-		assertThat("Counter was incremented", p.await(5, TimeUnit.SECONDS), greaterThan(9l));
-		System.out.println("count: " + p.get());
+		Promise<Long> p = counters.get("test")
+		                          .consume(b.bind(new Consumer<Long>() {
+			                          @Override
+			                          public void accept(Long l) {
+				                          LOG.info("Found counter test={}", l);
+			                          }
+		                          }));
+
+		assertThat("Counter value was retrieved", b.await(5, TimeUnit.SECONDS));
+		assertThat("Counter was incremented", p.get(), greaterThan(9l));
 	}
 
 	@Test
 	public void exposesObjectCache() throws InterruptedException {
 		Person p = personRepo.save(new Person("John Doe"));
-		personCache.set(p.getId(), p).await(5, TimeUnit.SECONDS);
-		Promise<Person> p2 = personCache.get(p.getId());
+		personCache.set(p.getId(), p)
+		           .consume(b.bind(new Consumer<Person>() {
+			           @Override
+			           public void accept(Person p) {
+				           LOG.info("Set person in cache {}", p);
+			           }
+		           }));
+		Promise<Person> p2 = personCache.get(p.getId())
+		                                .consume(b.bind(new Consumer<Person>() {
+			                                @Override
+			                                public void accept(Person p) {
+				                                LOG.info("Found person in cache {}", p);
+			                                }
+		                                }));
 
-		assertThat("Cached Person is the same as the in-scope Person", p, equalTo(p2.await(5, TimeUnit.SECONDS)));
+		assertThat("Cache was updated and result retrieved", b.await(5, TimeUnit.SECONDS));
+		assertThat("Cached Person is the same as the in-scope Person", p, equalTo(p2.get()));
 	}
 
 	@Test
