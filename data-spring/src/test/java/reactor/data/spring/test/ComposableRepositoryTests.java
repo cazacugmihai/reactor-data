@@ -143,9 +143,10 @@ public class ComposableRepositoryTests {
 
 	@Test
 	public void exposesKeysItHasSeen() throws InterruptedException {
+		Person p = personRepo.save(new Person("John Doe"));
+		personCache.set(p.getId(), p).await(1, TimeUnit.SECONDS);
 		List<String> keys = personCache.keys().await(1, TimeUnit.SECONDS);
 
-		assertThat("Keys is not null", keys, notNullValue());
 		assertThat("Keys contains some values", keys, not(empty()));
 	}
 
