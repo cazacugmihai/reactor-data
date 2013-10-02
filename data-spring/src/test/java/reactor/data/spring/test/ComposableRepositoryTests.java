@@ -1,6 +1,5 @@
 package reactor.data.spring.test;
 
-import com.lambdaworks.redis.RedisClient;
 import com.mongodb.Mongo;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,6 +17,7 @@ import reactor.core.Environment;
 import reactor.core.composable.Promise;
 import reactor.core.composable.spec.Promises;
 import reactor.data.spring.config.EnableComposableRepositories;
+import reactor.data.spring.redis.RedisClientFactoryBean;
 import reactor.function.Consumer;
 import reactor.function.support.Boundary;
 import reactor.function.support.Tap;
@@ -67,7 +67,7 @@ public class ComposableRepositoryTests {
 			                      }
 		                      }))
 		                      .tap();
-		assertTrue("Person was saved within the timeout", b.await(5, TimeUnit.SECONDS));
+		assertTrue("Person was saved within the timeout", b.await(15, TimeUnit.SECONDS));
 		assertThat("Person was actually saved to the database", t.get().getId(), notNullValue());
 	}
 
@@ -128,7 +128,7 @@ public class ComposableRepositoryTests {
 		Thread.sleep(500);
 
 		Promise<Long> p = counters.get("test")
-		                          .consume(b.bind(new Consumer<Long>() {
+		                          .onSuccess(b.bind(new Consumer<Long>() {
 			                          @Override
 			                          public void accept(Long l) {
 				                          LOG.info("Found counter test={}", l);
@@ -143,21 +143,21 @@ public class ComposableRepositoryTests {
 	public void exposesObjectCache() throws InterruptedException {
 		Person p = personRepo.save(new Person("John Doe"));
 		personCache.set(p.getId(), p)
-		           .consume(b.bind(new Consumer<Person>() {
+		           .onSuccess(b.bind(new Consumer<Person>() {
 			           @Override
 			           public void accept(Person p) {
 				           LOG.info("Set person in cache {}", p);
 			           }
 		           }));
 		Promise<Person> p2 = personCache.get(p.getId())
-		                                .consume(b.bind(new Consumer<Person>() {
+		                                .onSuccess(b.bind(new Consumer<Person>() {
 			                                @Override
 			                                public void accept(Person p) {
 				                                LOG.info("Found person in cache {}", p);
 			                                }
 		                                }));
 
-		assertThat("Cache was updated and result retrieved", b.await(5, TimeUnit.SECONDS));
+		assertThat("Cache was updated and result retrieved", b.await(15, TimeUnit.SECONDS));
 		assertThat("Cached Person is the same as the in-scope Person", p, equalTo(p2.get()));
 	}
 
@@ -182,8 +182,8 @@ public class ComposableRepositoryTests {
 		}
 
 		@Bean
-		RedisClient redisClient() {
-			return new RedisClient("localhost");
+		RedisClientFactoryBean redisClient() {
+			return new RedisClientFactoryBean("localhost");
 		}
 
 	}
