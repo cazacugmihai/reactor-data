@@ -1,15 +1,10 @@
-package reactor.data.spring.test;
-
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+package reactor.data.redis.test;
 
 /**
  * @author Jon Brisbin
  */
-@Document
 public class Person {
 
-	@Id
 	private String id;
 	private String name;
 

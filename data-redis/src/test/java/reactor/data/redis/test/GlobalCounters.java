@@ -1,4 +1,4 @@
-package reactor.data.spring.test;
+package reactor.data.redis.test;
 
 import reactor.data.core.ComposableCounterRepository;
 

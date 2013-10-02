@@ -6,6 +6,7 @@ import reactor.core.Environment;
 import reactor.core.composable.Deferred;
 import reactor.core.composable.Promise;
 import reactor.data.core.ComposableCacheRepository;
+import reactor.data.redis.codec.ObjectMapperCodec;
 import reactor.util.Assert;
 
 import java.util.ArrayList;
@@ -41,7 +42,7 @@ public class RedisComposableCacheRepository<V>
 
 	@Override
 	public Promise<List<String>> keys() {
-		final Deferred<List<String>, Promise<List<String>>> d = createDeferred();
+		final Deferred<List<String>, Promise<List<String>>> d = createDeferredPromise();
 
 		getExecutor().execute(new Runnable() {
 			@Override
@@ -66,7 +67,7 @@ public class RedisComposableCacheRepository<V>
 	public Promise<V> get(final String key) {
 		Assert.notNull(key, "Key cannot be null");
 
-		final Deferred<V, Promise<V>> d = createDeferred();
+		final Deferred<V, Promise<V>> d = createDeferredPromise();
 
 		getExecutor().execute(new Runnable() {
 			@Override
@@ -87,7 +88,7 @@ public class RedisComposableCacheRepository<V>
 		Assert.notNull(key, "Key cannot be null");
 		Assert.notNull(key, "Value cannot be null");
 
-		final Deferred<V, Promise<V>> d = createDeferred();
+		final Deferred<V, Promise<V>> d = createDeferredPromise();
 
 		getExecutor().execute(new Runnable() {
 			@Override
@@ -111,7 +112,7 @@ public class RedisComposableCacheRepository<V>
 		Assert.notNull(key, "Key cannot be null");
 		Assert.notNull(key, "Value cannot be null");
 
-		final Deferred<V, Promise<V>> d = createDeferred();
+		final Deferred<V, Promise<V>> d = createDeferredPromise();
 
 		getExecutor().execute(new Runnable() {
 			@Override
@@ -135,7 +136,7 @@ public class RedisComposableCacheRepository<V>
 	public Promise<V> remove(final String key) {
 		Assert.notNull(key, "Key cannot be null");
 
-		final Deferred<V, Promise<V>> d = createDeferred();
+		final Deferred<V, Promise<V>> d = createDeferredPromise();
 
 		getExecutor().execute(new Runnable() {
 			@Override

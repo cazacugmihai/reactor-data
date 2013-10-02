@@ -1,4 +1,4 @@
-package reactor.data.redis;
+package reactor.data.redis.codec;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

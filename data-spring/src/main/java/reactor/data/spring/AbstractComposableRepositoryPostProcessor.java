@@ -32,12 +32,10 @@ public abstract class AbstractComposableRepositoryPostProcessor<T>
 	private final String[]       basePackages;
 	private       ResourceLoader resourceLoader;
 
-	protected AbstractComposableRepositoryPostProcessor(
-			Environment env,
-			String dispatcher,
-			Executor executor,
-			String[] basePackages
-	) {
+	protected AbstractComposableRepositoryPostProcessor(Environment env,
+	                                                    String dispatcher,
+	                                                    Executor executor,
+	                                                    String[] basePackages) {
 		this.env = env;
 		this.dispatcher = dispatcher;
 		this.executor = executor;

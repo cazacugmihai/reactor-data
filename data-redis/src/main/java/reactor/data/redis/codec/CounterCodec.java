@@ -1,4 +1,4 @@
-package reactor.data.redis;
+package reactor.data.redis.codec;
 
 import com.lambdaworks.redis.codec.RedisCodec;
 

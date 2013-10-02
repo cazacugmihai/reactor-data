@@ -124,24 +124,10 @@ project('data-core') {
 	}
 }
 
-project('data-redis') {
-	description = 'Reactor components for working with Spring Data Repositories'
-	dependencies {
-		compile project(':data-core')
-
-		// Lettuce
-		compile "com.lambdaworks:lettuce:$lettuceVersion"
-
-		// Jackson
-		compile "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-	}
-}
-
 project('data-spring') {
 	description = 'Reactor components for working with Spring Data Repositories'
 	dependencies {
-		compile project(':data-core'),
-				project(':data-redis')
+		compile project(':data-core')
 
 		// Spring
 		compile "org.springframework:spring-beans:$springVersion",
@@ -163,8 +149,21 @@ project('data-spring') {
 
 		// Testing
 		testCompile "org.springframework.data:spring-data-mongodb:$sdMongoVersion",
-				"org.springframework.data:spring-data-couchbase:$sdCouchbaseVersion",
-				"com.lambdaworks:lettuce:$lettuceVersion"
+				"org.springframework.data:spring-data-couchbase:$sdCouchbaseVersion"
 		testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	}
 }
+
+project('data-redis') {
+	description = 'Reactor components for working with Redis-based Repositories'
+	dependencies {
+		compile project(':data-spring')
+
+		// Lettuce
+		compile "com.lambdaworks:lettuce:$lettuceVersion"
+
+		// Jackson
+		compile "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+	}
+}
+

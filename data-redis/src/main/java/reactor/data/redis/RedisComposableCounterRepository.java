@@ -6,6 +6,7 @@ import reactor.core.Environment;
 import reactor.core.composable.Deferred;
 import reactor.core.composable.Promise;
 import reactor.data.core.ComposableCounterRepository;
+import reactor.data.redis.codec.CounterCodec;
 import reactor.function.Consumer;
 import reactor.util.Assert;
 
@@ -73,7 +74,7 @@ public class RedisComposableCounterRepository
 
 	@Override
 	public Promise<Long> get(final String name) {
-		final Deferred<Long, Promise<Long>> d = createDeferred();
+		final Deferred<Long, Promise<Long>> d = createDeferredPromise();
 		getExecutor().execute(new Runnable() {
 			@Override
 			public void run() {
@@ -90,7 +91,7 @@ public class RedisComposableCounterRepository
 
 	@Override
 	public Promise<Long> remove(final String name) {
-		final Deferred<Long, Promise<Long>> d = createDeferred();
+		final Deferred<Long, Promise<Long>> d = createDeferredPromise();
 		getExecutor().execute(new Runnable() {
 			@Override
 			public void run() {

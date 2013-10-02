@@ -4,8 +4,11 @@ import com.lambdaworks.redis.RedisClient;
 import reactor.core.Environment;
 import reactor.core.composable.Deferred;
 import reactor.core.composable.Promise;
+import reactor.core.composable.Stream;
 import reactor.core.composable.spec.DeferredPromiseSpec;
+import reactor.core.composable.spec.DeferredStreamSpec;
 import reactor.core.composable.spec.Promises;
+import reactor.core.composable.spec.Streams;
 
 import java.util.concurrent.Executor;
 
@@ -49,12 +52,20 @@ abstract class AbstractRedisComposableRepository {
 		return timeout;
 	}
 
-	protected <T> Deferred<T, Promise<T>> createDeferred() {
+	protected <T> Deferred<T, Promise<T>> createDeferredPromise() {
 		DeferredPromiseSpec<T> promiseSpec = Promises.<T>defer().env(env);
 		if(null != dispatcher) {
 			promiseSpec.dispatcher(dispatcher);
 		}
 		return promiseSpec.get();
+	}
+
+	protected <T> Deferred<T, Stream<T>> createDeferredStream() {
+		DeferredStreamSpec<T> streamSpec = Streams.<T>defer().env(env);
+		if(null != dispatcher) {
+			streamSpec.dispatcher(dispatcher);
+		}
+		return streamSpec.get();
 	}
 
 	protected String unformatKey(String type, String name, String key) {
