@@ -67,7 +67,7 @@ public class ComposableRepositoryTests {
 			                      }
 		                      }))
 		                      .tap();
-		assertTrue("Person was saved within the timeout", b.await(1, TimeUnit.SECONDS));
+		assertTrue("Person was saved within the timeout", b.await(5, TimeUnit.SECONDS));
 		assertThat("Person was actually saved to the database", t.get().getId(), notNullValue());
 	}
 
@@ -81,7 +81,7 @@ public class ComposableRepositoryTests {
 			                      }
 		                      }))
 		                      .tap();
-		assertTrue("Person was saved within the timeout", b.await(1, TimeUnit.SECONDS));
+		assertTrue("Person was saved within the timeout", b.await(5, TimeUnit.SECONDS));
 		assertThat("Person was actually saved to the database", t.get().getId(), notNullValue());
 
 		Promise<Person> p2 = people.delete(t.get().getId())
@@ -91,7 +91,7 @@ public class ComposableRepositoryTests {
 				                           LOG.info("Deleted person {}", p);
 			                           }
 		                           }));
-		assertThat("Person was deleted within the timeout", p2.await(1, TimeUnit.SECONDS), notNullValue());
+		assertThat("Person was deleted within the timeout", p2.await(5, TimeUnit.SECONDS), notNullValue());
 	}
 
 	@Test
@@ -112,7 +112,7 @@ public class ComposableRepositoryTests {
 			                      }
 		                      }))
 		                      .tap();
-		assertTrue("Person was queried within the timeout", b.await(1, TimeUnit.SECONDS));
+		assertTrue("Person was queried within the timeout", b.await(5, TimeUnit.SECONDS));
 		assertThat("Person was actually actually queried", t.get().getId(), notNullValue());
 		assertThat("Person was actually actually queried", t.get().getName(), is("John Doe"));
 	}
@@ -128,24 +128,24 @@ public class ComposableRepositoryTests {
 		Thread.sleep(500);
 
 		Promise<Long> p = counters.get("test");
-		assertThat("Counter was incremented", p.await(1, TimeUnit.SECONDS), greaterThan(9l));
+		assertThat("Counter was incremented", p.await(5, TimeUnit.SECONDS), greaterThan(9l));
 		System.out.println("count: " + p.get());
 	}
 
 	@Test
 	public void exposesObjectCache() throws InterruptedException {
 		Person p = personRepo.save(new Person("John Doe"));
-		personCache.set(p.getId(), p).await(1, TimeUnit.SECONDS);
+		personCache.set(p.getId(), p).await(5, TimeUnit.SECONDS);
 		Promise<Person> p2 = personCache.get(p.getId());
 
-		assertThat("Cached Person is the same as the in-scope Person", p, equalTo(p2.await(1, TimeUnit.SECONDS)));
+		assertThat("Cached Person is the same as the in-scope Person", p, equalTo(p2.await(5, TimeUnit.SECONDS)));
 	}
 
 	@Test
 	public void exposesKeysItHasSeen() throws InterruptedException {
 		Person p = personRepo.save(new Person("John Doe"));
-		personCache.set(p.getId(), p).await(1, TimeUnit.SECONDS);
-		List<String> keys = personCache.keys().await(1, TimeUnit.SECONDS);
+		personCache.set(p.getId(), p).await(5, TimeUnit.SECONDS);
+		List<String> keys = personCache.keys().await(5, TimeUnit.SECONDS);
 
 		assertThat("Keys contains some values", keys, not(empty()));
 	}
