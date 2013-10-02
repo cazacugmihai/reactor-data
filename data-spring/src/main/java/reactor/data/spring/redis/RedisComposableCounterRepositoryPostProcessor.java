@@ -22,14 +22,16 @@ public class RedisComposableCounterRepositoryPostProcessor
 		implements BeanFactoryAware {
 
 	private final ReentrantLock repoLock = new ReentrantLock();
-	private BeanFactory                 beanFactory;
-	private ComposableCounterRepository composableRepo;
+	private final long                        timeout;
+	private       BeanFactory                 beanFactory;
+	private       ComposableCounterRepository composableRepo;
 
 	public RedisComposableCounterRepositoryPostProcessor(Environment env,
 	                                                     String dispatcher,
 	                                                     Executor executor,
 	                                                     String[] basePackages) {
 		super(env, dispatcher, executor, basePackages);
+		this.timeout = env != null ? env.getProperty("reactor.await.defaultTimeout", Long.class, 60000L) : 60000L;
 	}
 
 	@Override
@@ -54,8 +56,10 @@ public class RedisComposableCounterRepositoryPostProcessor
 			return composableRepo = new RedisComposableCounterRepository(
 					getEnvironment(),
 					getDispatcher(),
-					client.connect(new CounterCodec()),
-					getExecutor()
+					getExecutor(),
+					client,
+					timeout,
+					repoType.getName()
 			);
 		} finally {
 			repoLock.unlock();

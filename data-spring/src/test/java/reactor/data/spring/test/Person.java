@@ -36,4 +36,32 @@ public class Person {
 		this.name = name;
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if(this == o) {
+			return true;
+		}
+		if(o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		Person person = (Person)o;
+
+		if(!id.equals(person.id)) {
+			return false;
+		}
+		if(!name.equals(person.name)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		int result = id.hashCode();
+		result = 31 * result + name.hashCode();
+		return result;
+	}
+
 }

@@ -66,10 +66,10 @@ public class SpringDataComposableCrudRepositoryPostProcessor<T, K extends Serial
 
 			Class<?> managedType = null;
 			for(Class<?> intfType : repoType.getInterfaces()) {
-				if(!ComposableRepository.class.isAssignableFrom(intfType)) {
+				if(!ComposableCrudRepository.class.isAssignableFrom(intfType)) {
 					continue;
 				}
-				Class<?>[] types = resolveTypeArguments(repoType, ComposableRepository.class);
+				Class<?>[] types = resolveTypeArguments(repoType, ComposableCrudRepository.class);
 				managedType = types[0];
 				break;
 			}

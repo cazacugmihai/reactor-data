@@ -34,6 +34,7 @@ ext {
 
 	// Libraries
 	lettuceVersion = '2.3.3'
+	jacksonVersion = '2.2.3'
 }
 
 buildscript {
@@ -130,6 +131,9 @@ project('data-redis') {
 
 		// Lettuce
 		compile "com.lambdaworks:lettuce:$lettuceVersion"
+
+		// Jackson
+		compile "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
 	}
 }
 

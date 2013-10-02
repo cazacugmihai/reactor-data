@@ -24,6 +24,7 @@ import reactor.function.support.Tap;
 import reactor.spring.context.config.EnableReactor;
 
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -40,9 +41,13 @@ public class ComposableRepositoryTests {
 	private static final Logger LOG = LoggerFactory.getLogger(ComposableRepositoryTests.class);
 
 	@Autowired
+	PersonRepository           personRepo;
+	@Autowired
 	ComposablePersonRepository people;
 	@Autowired
 	GlobalCounters             counters;
+	@Autowired
+	PersonCache                personCache;
 	Boundary        b;
 	Promise<Person> personPromise;
 
@@ -125,6 +130,23 @@ public class ComposableRepositoryTests {
 		Promise<Long> p = counters.get("test");
 		assertThat("Counter was incremented", p.await(1, TimeUnit.SECONDS), greaterThan(9l));
 		System.out.println("count: " + p.get());
+	}
+
+	@Test
+	public void exposesObjectCache() throws InterruptedException {
+		Person p = personRepo.save(new Person("John Doe"));
+		personCache.set(p.getId(), p).await(1, TimeUnit.SECONDS);
+		Promise<Person> p2 = personCache.get(p.getId());
+
+		assertThat("Cached Person is the same as the in-scope Person", p, equalTo(p2.await(1, TimeUnit.SECONDS)));
+	}
+
+	@Test
+	public void exposesKeysItHasSeen() throws InterruptedException {
+		List<String> keys = personCache.keys().await(1, TimeUnit.SECONDS);
+
+		assertThat("Keys is not null", keys, notNullValue());
+		assertThat("Keys contains some values", keys, not(empty()));
 	}
 
 	@Configuration

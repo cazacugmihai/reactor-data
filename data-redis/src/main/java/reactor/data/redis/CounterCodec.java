@@ -1,4 +1,4 @@
-package reactor.data.spring.redis;
+package reactor.data.redis;
 
 import com.lambdaworks.redis.codec.RedisCodec;
 
