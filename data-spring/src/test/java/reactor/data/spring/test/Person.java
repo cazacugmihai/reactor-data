@@ -37,6 +37,14 @@ public class Person {
 	}
 
 	@Override
+	public String toString() {
+		return "Person{" +
+				"id='" + id + '\'' +
+				", name='" + name + '\'' +
+				'}';
+	}
+
+	@Override
 	public boolean equals(Object o) {
 		if(this == o) {
 			return true;
