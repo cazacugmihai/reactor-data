@@ -1,8 +1,11 @@
 package reactor.data.redis;
 
 import com.lambdaworks.redis.RedisClient;
-import com.lambdaworks.redis.pubsub.RedisPubSubAdapter;
+import com.lambdaworks.redis.RedisConnection;
 import com.lambdaworks.redis.pubsub.RedisPubSubConnection;
+import com.lambdaworks.redis.pubsub.RedisPubSubListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.Environment;
 import reactor.core.Reactor;
 import reactor.core.composable.Deferred;
@@ -12,13 +15,16 @@ import reactor.core.spec.Reactors;
 import reactor.data.core.ComposableMessagingRepository;
 import reactor.data.redis.codec.ObjectMapperCodec;
 import reactor.event.Event;
+import reactor.event.registry.Registration;
 import reactor.event.support.EventConsumer;
 import reactor.util.Assert;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 
 import static reactor.event.selector.Selectors.$;
+import static reactor.event.selector.Selectors.R;
 
 /**
  * @author Jon Brisbin
@@ -27,9 +33,13 @@ public class RedisComposableMessagingRepository<V>
 		extends AbstractRedisComposableRepository
 		implements ComposableMessagingRepository<V, String> {
 
+	private static final Logger LOG  = LoggerFactory.getLogger(RedisComposableMessagingRepository.class);
 	private static final String TYPE = "messaging";
 
-	private final RedisPubSubConnection<String, V> redis;
+	private final Map<String, Deferred<V, Stream<V>>> deferreds     = new ConcurrentHashMap<>();
+	private final Map<String, Registration>           registrations = new ConcurrentHashMap<>();
+	private final RedisConnection<String, V>       pub;
+	private final RedisPubSubConnection<String, V> sub;
 	private final Class<V>                         type;
 	private final String                           typeName;
 	private final Reactor                          reactor;
@@ -41,15 +51,65 @@ public class RedisComposableMessagingRepository<V>
 	                                          long timeout,
 	                                          Class<V> type) {
 		super(env, dispatcher, executor, client, timeout);
-		this.redis = client.connectPubSub(new ObjectMapperCodec<>(type));
+		ObjectMapperCodec<V> codec = new ObjectMapperCodec<>(type);
+		this.pub = client.connect(codec);
+		this.sub = client.connectPubSub(codec);
 		this.type = type;
 		this.typeName = type.getName();
-		this.reactor = Reactors.reactor().env(env).dispatcher(dispatcher).get();
+		this.reactor = Reactors.reactor().env(env).synchronousDispatcher().get();
 
-		redis.addListener(new RedisPubSubAdapter<String, V>() {
+		sub.addListener(new RedisPubSubListener<String, V>() {
 			@Override
 			public void message(String channel, V message) {
-				reactor.notify(formatKey(TYPE, typeName, channel), Event.wrap(message));
+				//LOG.info("message: {} {}", channel, message);
+				message(null, channel, message);
+			}
+
+			@Override
+			public void message(String pattern, String channel, V message) {
+				//LOG.info("message: {} {} {}", pattern, channel, message);
+				reactor.notify(channel, Event.wrap(message));
+			}
+
+			@Override
+			public void subscribed(String channel, long count) {
+				//LOG.info("subscribed: {} {}", channel, count);
+				Deferred<V, Stream<V>> deferred = deferreds.remove(channel);
+				if(null == deferred) {
+					return;
+				}
+				registrations.put(channel, reactor.on($(channel), new EventConsumer<>(deferred)));
+			}
+
+			@Override
+			public void psubscribed(String pattern, long count) {
+				//LOG.info("psubscribed: {} {}", pattern, count);
+				Deferred<V, Stream<V>> deferred = deferreds.remove(pattern);
+				if(null == deferred) {
+					return;
+				}
+				if(pattern.contains("*")) {
+					pattern = pattern.replaceAll("\\*", "(.*)");
+				}
+				registrations.put(pattern, reactor.on(R(pattern), new EventConsumer<>(deferred)));
+			}
+
+			@Override
+			public void unsubscribed(String channel, long count) {
+				//LOG.info("unsubscribed: {} {}", channel, count);
+				Registration reg = registrations.remove(channel);
+				if(null != reg) {
+					reg.cancel();
+				}
+			}
+
+			@Override
+			public void punsubscribed(String pattern, long count) {
+				//LOG.info("punsubscribed: {} {}", pattern, count);
+				Registration reg = registrations.remove(pattern);
+				if(null != reg) {
+					reg.cancel();
+				}
 			}
 		});
 	}
@@ -64,7 +124,8 @@ public class RedisComposableMessagingRepository<V>
 			@Override
 			public void run() {
 				try {
-					redis.publish(formatKey(TYPE, typeName, key), message).get(getTimeout(), TimeUnit.MILLISECONDS);
+					LOG.info("publishing: {} to {}", message, formatKey(TYPE, typeName, key));
+					pub.publish(formatKey(TYPE, typeName, key), message);
 					d.accept((Void)null);
 				} catch(Exception e) {
 					d.accept(e);
@@ -76,12 +137,25 @@ public class RedisComposableMessagingRepository<V>
 	}
 
 	@Override
-	public Stream<V> receive(String key) {
+	public Stream<V> receive(final String key) {
 		Assert.notNull(key, "Key cannot be null");
 
 		Deferred<V, Stream<V>> d = createDeferredStream();
 
-		reactor.on($(formatKey(TYPE, typeName, key)), new EventConsumer<>(d));
+		final String channel = formatKey(TYPE, typeName, key);
+		LOG.info("subscribing to {}", channel);
+		deferreds.put(channel, d);
+
+		getExecutor().execute(new Runnable() {
+			@Override
+			public void run() {
+				if(key.contains("*")) {
+					sub.psubscribe(channel);
+				} else {
+					sub.subscribe(channel);
+				}
+			}
+		});
 
 		return d.compose();
 	}

@@ -16,6 +16,7 @@ import reactor.data.spring.config.EnableComposableRepositories;
 import reactor.data.spring.redis.RedisClientFactoryBean;
 import reactor.function.Consumer;
 import reactor.function.support.Boundary;
+import reactor.function.support.Tap;
 import reactor.spring.context.config.EnableReactor;
 
 import java.util.List;
@@ -37,6 +38,8 @@ public class RedisComposableRepositoryTests {
 	GlobalCounters counters;
 	@Autowired
 	PersonCache    personCache;
+	@Autowired
+	PersonBroker   personBroker;
 	Boundary b;
 
 	@Before
@@ -95,6 +98,25 @@ public class RedisComposableRepositoryTests {
 		List<String> keys = personCache.keys().await(5, TimeUnit.SECONDS);
 
 		assertThat("Keys contains some values", keys, not(empty()));
+	}
+
+	@Test
+	public void exposesMessaging() throws InterruptedException {
+		Person p = new Person("1", "John Doe");
+
+		Tap<Person> tap = personBroker.receive("*")
+		                              .consume(b.bind(new Consumer<Person>() {
+			                              @Override
+			                              public void accept(Person person) {
+				                              LOG.info("Found Person {}", person);
+			                              }
+		                              }))
+		                              .tap();
+		personBroker.send("person", p);
+
+		assertThat("Consumer was invoked", b.await(60, TimeUnit.SECONDS));
+		assertThat("Person was retrieved", tap.get(), notNullValue());
+		assertThat("Person is correct", tap.get(), equalTo(p));
 	}
 
 	@Configuration

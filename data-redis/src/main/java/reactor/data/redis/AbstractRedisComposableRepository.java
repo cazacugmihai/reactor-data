@@ -22,6 +22,7 @@ abstract class AbstractRedisComposableRepository {
 	private final Environment env;
 	private final String      dispatcher;
 	private final Executor    executor;
+	private final RedisClient client;
 	private final long        timeout;
 
 
@@ -33,10 +34,11 @@ abstract class AbstractRedisComposableRepository {
 		this.env = env;
 		this.dispatcher = dispatcher;
 		this.executor = executor;
+		this.client = client;
 		this.timeout = timeout;
 	}
 
-	public Environment getEnv() {
+	public Environment getEnvironment() {
 		return env;
 	}
 
@@ -46,6 +48,10 @@ abstract class AbstractRedisComposableRepository {
 
 	public Executor getExecutor() {
 		return executor;
+	}
+
+	public RedisClient getClient() {
+		return client;
 	}
 
 	public long getTimeout() {
