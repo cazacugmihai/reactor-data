@@ -17,14 +17,11 @@ import java.util.concurrent.Executor;
  */
 abstract class AbstractRedisComposableRepository {
 
-	static final String PREFIX = "reactor.composable:";
-
 	private final Environment env;
 	private final String      dispatcher;
 	private final Executor    executor;
 	private final RedisClient client;
 	private final long        timeout;
-
 
 	protected AbstractRedisComposableRepository(Environment env,
 	                                            String dispatcher,
