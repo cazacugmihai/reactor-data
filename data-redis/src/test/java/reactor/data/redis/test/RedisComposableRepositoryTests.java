@@ -87,7 +87,7 @@ public class RedisComposableRepositoryTests {
 			                                }
 		                                }));
 
-		assertThat("Cache was updated and result retrieved", b.await(15, TimeUnit.SECONDS));
+		assertThat("Cache was updated and result retrieved", b.await(5, TimeUnit.SECONDS));
 		assertThat("Cached Person is the same as the in-scope Person", p, equalTo(p2.get()));
 	}
 
@@ -114,7 +114,7 @@ public class RedisComposableRepositoryTests {
 		                              .tap();
 		personBroker.send("person", p);
 
-		assertThat("Consumer was invoked", b.await(60, TimeUnit.SECONDS));
+		assertThat("Consumer was invoked", b.await(5, TimeUnit.SECONDS));
 		assertThat("Person was retrieved", tap.get(), notNullValue());
 		assertThat("Person is correct", tap.get(), equalTo(p));
 	}

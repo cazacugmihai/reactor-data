@@ -89,6 +89,9 @@ public abstract class AbstractComposableRepositoryPostProcessor<T>
 				}
 
 				T repo = getRepositoryProxy(repoType);
+				if(null == repo) {
+					continue;
+				}
 
 				ProxyFactory pf = new ProxyFactory(repo);
 				pf.addInterface(repoType);

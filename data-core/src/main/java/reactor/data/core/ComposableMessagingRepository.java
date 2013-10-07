@@ -11,7 +11,7 @@ import java.io.Serializable;
  *
  * @author Jon Brisbin
  */
-public interface ComposableMessagingRepository<V, K extends Serializable> {
+public interface ComposableMessagingRepository<V, K extends Serializable> extends ComposableRepository<V, K> {
 
 	/**
 	 * Send the given message using the given routing key.

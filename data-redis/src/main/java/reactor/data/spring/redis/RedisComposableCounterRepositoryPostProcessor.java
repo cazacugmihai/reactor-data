@@ -5,14 +5,18 @@ import org.aopalliance.aop.Advice;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.util.StringUtils;
 import reactor.core.Environment;
 import reactor.data.core.ComposableCounterRepository;
+import reactor.data.core.annotation.Provider;
 import reactor.data.redis.RedisComposableCounterRepository;
 import reactor.data.spring.AbstractComposableRepositoryPostProcessor;
 
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 
 /**
  * @author Jon Brisbin
@@ -50,6 +54,13 @@ public class RedisComposableCounterRepositoryPostProcessor
 		try {
 			if(null != composableRepo) {
 				return composableRepo;
+			}
+
+			Provider providerAnno = findAnnotation(repoType, Provider.class);
+			if(null != providerAnno && StringUtils.hasText(providerAnno.value())) {
+				if(!"redis".equals(providerAnno.value())) {
+					return null;
+				}
 			}
 
 			RedisClient client = beanFactory.getBean(RedisClient.class);

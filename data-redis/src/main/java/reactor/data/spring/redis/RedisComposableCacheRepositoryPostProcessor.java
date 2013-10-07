@@ -6,8 +6,10 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.util.StringUtils;
 import reactor.core.Environment;
 import reactor.data.core.ComposableCacheRepository;
+import reactor.data.core.annotation.Provider;
 import reactor.data.redis.RedisComposableCacheRepository;
 import reactor.data.spring.AbstractComposableRepositoryPostProcessor;
 
@@ -16,6 +18,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.springframework.core.GenericTypeResolver.resolveTypeArguments;
+import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 
 /**
  * @author Jon Brisbin
@@ -62,6 +65,12 @@ public class RedisComposableCacheRepositoryPostProcessor<V>
 			for(Class<?> intfType : type.getInterfaces()) {
 				if(!ComposableCacheRepository.class.isAssignableFrom(intfType)) {
 					continue;
+				}
+				Provider providerAnno = findAnnotation(intfType, Provider.class);
+				if(null != providerAnno && StringUtils.hasText(providerAnno.value())) {
+					if(!"redis".equals(providerAnno.value())) {
+						continue;
+					}
 				}
 				Class<?>[] types = resolveTypeArguments(type, ComposableCacheRepository.class);
 				managedType = (Class<V>)types[0];

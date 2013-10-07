@@ -30,7 +30,7 @@ ext {
 	sdCouchbaseVersion = '1.0.0.M1'
 
 	// Reactor
-	reactorVersion = '1.0.0.RC1'
+	reactorVersion = '1.0.0.BUILD-SNAPSHOT'
 
 	// Libraries
 	lettuceVersion = '2.3.3'
@@ -99,7 +99,7 @@ allprojects {
 	group = 'org.projectreactor.data'
 	repositories {
 		//mavenLocal()
-		maven { url 'http://repo.spring.io/libs-milestone' }
+		maven { url 'http://repo.spring.io/libs-snapshot' }
 		maven { url 'http://files.couchbase.com/maven2' }
 		mavenCentral()
 	}
@@ -121,6 +121,8 @@ project('data-core') {
 	dependencies {
 		// Reactor
 		compile "org.projectreactor:reactor-core:$reactorVersion"
+
+		optional("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
 	}
 }
 

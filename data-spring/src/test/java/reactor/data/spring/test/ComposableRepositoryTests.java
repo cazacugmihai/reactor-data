@@ -17,6 +17,7 @@ import reactor.core.Environment;
 import reactor.core.composable.Promise;
 import reactor.core.composable.spec.Promises;
 import reactor.data.spring.config.EnableComposableRepositories;
+import reactor.event.Event;
 import reactor.function.Consumer;
 import reactor.function.support.Boundary;
 import reactor.function.support.Tap;
@@ -43,6 +44,8 @@ public class ComposableRepositoryTests {
 	PersonRepository           personRepo;
 	@Autowired
 	ComposablePersonRepository people;
+	@Autowired
+	PersonReactor              personReactor;
 	Boundary        b;
 	Promise<Person> personPromise;
 
@@ -110,6 +113,20 @@ public class ComposableRepositoryTests {
 		assertTrue("Person was queried within the timeout", b.await(5, TimeUnit.SECONDS));
 		assertThat("Person was actually actually queried", t.get().getId(), notNullValue());
 		assertThat("Person was actually actually queried", t.get().getName(), is("John Doe"));
+	}
+
+	@Test
+	public void managesEventStreams() {
+		personReactor.receive("test")
+		             .consume(b.bind(new Consumer<Event<Person>>() {
+			             @Override
+			             public void accept(Event<Person> ev) {
+				             LOG.info("Got event: {}", ev);
+			             }
+		             }));
+		personReactor.send("test", Event.wrap(new Person("1", "John Doe")));
+
+		assertTrue("Boundary did not time out.", b.await(1, TimeUnit.SECONDS));
 	}
 
 	@Configuration

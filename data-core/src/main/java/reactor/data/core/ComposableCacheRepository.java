@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Jon Brisbin
  */
-public interface ComposableCacheRepository<V, K extends Serializable> {
+public interface ComposableCacheRepository<V, K extends Serializable> extends ComposableRepository<V, K> {
 
 	/**
 	 * Get a list of the keys this cache repository knows about and fulfill the returned {@link
