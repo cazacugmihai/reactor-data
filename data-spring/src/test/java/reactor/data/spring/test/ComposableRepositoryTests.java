@@ -46,13 +46,13 @@ public class ComposableRepositoryTests {
 	ComposablePersonRepository people;
 	@Autowired
 	PersonReactor              personReactor;
-	Boundary        b;
 	Promise<Person> personPromise;
+	Boundary        b;
 
 	@Before
 	public void start() {
-		b = new Boundary();
 		personPromise = Promises.success(new Person("John Doe")).get();
+		b = new Boundary();
 	}
 
 	@Test
@@ -65,7 +65,7 @@ public class ComposableRepositoryTests {
 			                      }
 		                      }))
 		                      .tap();
-		assertTrue("Person was saved within the timeout", b.await(15, TimeUnit.SECONDS));
+		assertTrue("Boundary did not time out", b.await(5, TimeUnit.SECONDS));
 		assertThat("Person was actually saved to the database", t.get().getId(), notNullValue());
 	}
 
@@ -79,17 +79,18 @@ public class ComposableRepositoryTests {
 			                      }
 		                      }))
 		                      .tap();
-		assertTrue("Person was saved within the timeout", b.await(5, TimeUnit.SECONDS));
+		assertTrue("Boundary did not time out", b.await(5, TimeUnit.SECONDS));
 		assertThat("Person was actually saved to the database", t.get().getId(), notNullValue());
 
 		Promise<Person> p2 = people.delete(t.get().getId())
-		                           .onSuccess(b.<Person>bind(new Consumer<Person>() {
+		                           .onSuccess(b.bind(new Consumer<Person>() {
 			                           @Override
 			                           public void accept(Person p) {
 				                           LOG.info("Deleted person {}", p);
 			                           }
 		                           }));
 		assertThat("Person was deleted within the timeout", p2.await(5, TimeUnit.SECONDS), notNullValue());
+		assertTrue("Boundary did not time out", b.await(5, TimeUnit.SECONDS));
 	}
 
 	@Test
@@ -110,7 +111,7 @@ public class ComposableRepositoryTests {
 			                      }
 		                      }))
 		                      .tap();
-		assertTrue("Person was queried within the timeout", b.await(5, TimeUnit.SECONDS));
+		assertTrue("Boundary did not time out", b.await(5, TimeUnit.SECONDS));
 		assertThat("Person was actually actually queried", t.get().getId(), notNullValue());
 		assertThat("Person was actually actually queried", t.get().getName(), is("John Doe"));
 	}
@@ -126,7 +127,7 @@ public class ComposableRepositoryTests {
 		             }));
 		personReactor.send("test", Event.wrap(new Person("1", "John Doe")));
 
-		assertTrue("Boundary did not time out.", b.await(1, TimeUnit.SECONDS));
+		assertTrue("Boundary did not time out", b.await(5, TimeUnit.SECONDS));
 	}
 
 	@Configuration
