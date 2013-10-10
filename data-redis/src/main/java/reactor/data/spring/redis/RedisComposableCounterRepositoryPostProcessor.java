@@ -1,34 +1,20 @@
 package reactor.data.spring.redis;
 
 import com.lambdaworks.redis.RedisClient;
-import org.aopalliance.aop.Advice;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.BeanFactoryAware;
-import org.springframework.util.StringUtils;
 import reactor.core.Environment;
 import reactor.data.core.ComposableCounterRepository;
-import reactor.data.core.annotation.Provider;
 import reactor.data.redis.RedisComposableCounterRepository;
 import reactor.data.spring.AbstractComposableRepositoryPostProcessor;
 
-import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.locks.ReentrantLock;
-
-import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 
 /**
  * @author Jon Brisbin
  */
 public class RedisComposableCounterRepositoryPostProcessor
-		extends AbstractComposableRepositoryPostProcessor<ComposableCounterRepository>
-		implements BeanFactoryAware {
+		extends AbstractComposableRepositoryPostProcessor<Long, ComposableCounterRepository> {
 
-	private final ReentrantLock repoLock = new ReentrantLock();
-	private final long                        timeout;
-	private       BeanFactory                 beanFactory;
-	private       ComposableCounterRepository composableRepo;
+	private final long timeout;
 
 	public RedisComposableCounterRepositoryPostProcessor(Environment env,
 	                                                     String dispatcher,
@@ -39,47 +25,23 @@ public class RedisComposableCounterRepositoryPostProcessor
 	}
 
 	@Override
-	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-		this.beanFactory = beanFactory;
-	}
-
-	@Override
 	protected Class<?> getRepositoryType() {
 		return ComposableCounterRepository.class;
 	}
 
 	@Override
-	protected ComposableCounterRepository getRepositoryProxy(Class<ComposableCounterRepository> repoType) {
-		repoLock.lock();
-		try {
-			if(null != composableRepo) {
-				return composableRepo;
-			}
-
-			Provider providerAnno = findAnnotation(repoType, Provider.class);
-			if(null != providerAnno && StringUtils.hasText(providerAnno.value())) {
-				if(!"redis".equals(providerAnno.value())) {
-					return null;
-				}
-			}
-
-			RedisClient client = beanFactory.getBean(RedisClient.class);
-			return composableRepo = new RedisComposableCounterRepository(
-					getEnvironment(),
-					getDispatcher(),
-					getExecutor(),
-					client,
-					timeout,
-					repoType.getName()
-			);
-		} finally {
-			repoLock.unlock();
-		}
+	protected String getProviderName() {
+		return "redis";
 	}
 
 	@Override
-	protected List<Advice> getAdvice(Class<ComposableCounterRepository> repoType, ComposableCounterRepository obj) {
-		return null;
+	protected ComposableCounterRepository createRepositoryProxy(Class<Long> managedType) {
+		return new RedisComposableCounterRepository(getEnvironment(),
+		                                            getDispatcher(),
+		                                            getExecutor(),
+		                                            beanFactory.getBean(RedisClient.class),
+		                                            timeout,
+		                                            Long.class.getName());
 	}
 
 }

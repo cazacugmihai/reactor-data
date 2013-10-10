@@ -30,13 +30,11 @@ class SpringDataComposableCrudRepository<T, ID extends Serializable> implements 
 	private final Class<?>              managedType;
 	private       CrudRepository<T, ID> delegateRepository;
 
-	SpringDataComposableCrudRepository(
-			Environment env,
-			String dispatcher,
-			Executor executor,
-			Repositories repositories,
-			Class<?> managedType
-	) {
+	SpringDataComposableCrudRepository(Environment env,
+	                                   String dispatcher,
+	                                   Executor executor,
+	                                   Repositories repositories,
+	                                   Class<?> managedType) {
 		this.env = env;
 		this.executor = executor;
 		this.repositories = repositories;

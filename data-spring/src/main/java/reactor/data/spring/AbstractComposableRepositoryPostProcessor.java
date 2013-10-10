@@ -3,6 +3,9 @@ package reactor.data.spring;
 import org.aopalliance.aop.Advice;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -12,25 +15,38 @@ import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.filter.AssignableTypeFilter;
+import org.springframework.util.StringUtils;
 import reactor.core.Environment;
 import reactor.data.core.ComposableRepository;
+import reactor.data.core.annotation.Provider;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.ReentrantLock;
+
+import static org.springframework.core.GenericTypeResolver.resolveTypeArguments;
+import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 
 /**
  * @author Jon Brisbin
  */
-public abstract class AbstractComposableRepositoryPostProcessor<T>
+public abstract class
+		AbstractComposableRepositoryPostProcessor<V, R extends ComposableRepository<V, ? extends Serializable>>
 		implements BeanDefinitionRegistryPostProcessor,
-		           ResourceLoaderAware {
+		           ResourceLoaderAware,
+		           BeanFactoryAware {
+
+	private final ReentrantLock repoLock = new ReentrantLock();
 
 	private final Environment env;
 	private final String      dispatcher;
 	private final Executor    executor;
+	private final String[]    basePackages;
 
-	private final String[]       basePackages;
-	private       ResourceLoader resourceLoader;
+	protected ResourceLoader      resourceLoader;
+	protected ListableBeanFactory beanFactory;
+	private   R                   composableRepo;
 
 	protected AbstractComposableRepositoryPostProcessor(Environment env,
 	                                                    String dispatcher,
@@ -60,6 +76,11 @@ public abstract class AbstractComposableRepositoryPostProcessor<T>
 	}
 
 	@Override
+	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+		this.beanFactory = (ListableBeanFactory)beanFactory;
+	}
+
+	@Override
 	public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
 	}
 
@@ -81,14 +102,14 @@ public abstract class AbstractComposableRepositoryPostProcessor<T>
 					continue;
 				}
 
-				Class<T> repoType;
+				Class<R> repoType;
 				try {
-					repoType = (Class<T>)Class.forName(beanDef.getBeanClassName());
+					repoType = (Class<R>)Class.forName(beanDef.getBeanClassName());
 				} catch(ClassNotFoundException e) {
 					throw new IllegalStateException(e);
 				}
 
-				T repo = getRepositoryProxy(repoType);
+				R repo = getRepositoryProxy(repoType);
 				if(null == repo) {
 					continue;
 				}
@@ -109,10 +130,47 @@ public abstract class AbstractComposableRepositoryPostProcessor<T>
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	private R getRepositoryProxy(Class<R> repoType) {
+		repoLock.lock();
+		try {
+			if(null != composableRepo) {
+				return composableRepo;
+			}
+
+			Class<V> managedType = null;
+			for(Class<?> intfType : repoType.getInterfaces()) {
+				if(!getRepositoryType().isAssignableFrom(intfType)) {
+					continue;
+				}
+				Provider providerAnno = findAnnotation(intfType, Provider.class);
+				if(null != providerAnno && StringUtils.hasText(providerAnno.value())) {
+					if(!getProviderName().equals(providerAnno.value())) {
+						continue;
+					}
+				}
+				Class<?>[] types = resolveTypeArguments(repoType, getRepositoryType());
+				if(null == types) {
+					continue;
+				}
+				managedType = (Class<V>)types[0];
+				break;
+			}
+
+			return composableRepo = createRepositoryProxy(managedType);
+		} finally {
+			repoLock.unlock();
+		}
+	}
+
+	protected List<Advice> getAdvice(Class<R> repoType, R composableRepo) {
+		return null;
+	}
+
 	protected abstract Class<?> getRepositoryType();
 
-	protected abstract T getRepositoryProxy(Class<T> repoType);
+	protected abstract String getProviderName();
 
-	protected abstract List<Advice> getAdvice(Class<T> repoType, T obj);
+	protected abstract R createRepositoryProxy(Class<V> managedType);
 
 }

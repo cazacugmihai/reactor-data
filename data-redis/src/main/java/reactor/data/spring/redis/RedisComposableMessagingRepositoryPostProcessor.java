@@ -1,36 +1,20 @@
 package reactor.data.spring.redis;
 
 import com.lambdaworks.redis.RedisClient;
-import org.aopalliance.aop.Advice;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.BeanFactoryAware;
-import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.util.StringUtils;
 import reactor.core.Environment;
 import reactor.data.core.ComposableMessagingRepository;
-import reactor.data.core.annotation.Provider;
 import reactor.data.redis.RedisComposableMessagingRepository;
 import reactor.data.spring.AbstractComposableRepositoryPostProcessor;
 
-import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.locks.ReentrantLock;
-
-import static org.springframework.core.GenericTypeResolver.resolveTypeArguments;
-import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 
 /**
  * @author Jon Brisbin
  */
 public class RedisComposableMessagingRepositoryPostProcessor<V>
-		extends AbstractComposableRepositoryPostProcessor<ComposableMessagingRepository<V, String>>
-		implements BeanFactoryAware {
+		extends AbstractComposableRepositoryPostProcessor<V, ComposableMessagingRepository<V, String>> {
 
-	private final ReentrantLock repoLock = new ReentrantLock();
-	private final long                                     timeout;
-	private       ListableBeanFactory                      beanFactory;
-	private       ComposableMessagingRepository<V, String> composableRepo;
+	private final long timeout;
 
 	public RedisComposableMessagingRepositoryPostProcessor(Environment env,
 	                                                       String dispatcher,
@@ -41,63 +25,23 @@ public class RedisComposableMessagingRepositoryPostProcessor<V>
 	}
 
 	@Override
-	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-		if(beanFactory instanceof ListableBeanFactory) {
-			this.beanFactory = (ListableBeanFactory)beanFactory;
-		}
-	}
-
-	@Override
 	protected Class<?> getRepositoryType() {
 		return ComposableMessagingRepository.class;
 	}
 
 	@Override
-	protected ComposableMessagingRepository<V, String> getRepositoryProxy(Class<ComposableMessagingRepository<V,
-			String>> repoType) {
-		repoLock.lock();
-		try {
-			if(null != composableRepo) {
-				return composableRepo;
-			}
-
-			Class<V> managedType = null;
-			for(Class<?> intfType : repoType.getInterfaces()) {
-				if(!ComposableMessagingRepository.class.isAssignableFrom(intfType)) {
-					continue;
-				}
-				Provider providerAnno = findAnnotation(intfType, Provider.class);
-				if(null != providerAnno && StringUtils.hasText(providerAnno.value())) {
-					if(!"redis".equals(providerAnno.value())) {
-						continue;
-					}
-				}
-
-				Class<?>[] types = resolveTypeArguments(repoType, ComposableMessagingRepository.class);
-				managedType = (Class<V>)types[0];
-				break;
-			}
-
-			if(null == managedType) {
-				return null;
-			}
-
-			RedisClient client = beanFactory.getBean(RedisClient.class);
-			return composableRepo = new RedisComposableMessagingRepository<>(getEnvironment(),
-			                                                                 getDispatcher(),
-			                                                                 getExecutor(),
-			                                                                 client,
-			                                                                 timeout,
-			                                                                 managedType);
-		} finally {
-			repoLock.unlock();
-		}
+	protected String getProviderName() {
+		return "redis";
 	}
 
 	@Override
-	protected List<Advice> getAdvice(Class<ComposableMessagingRepository<V, String>> repoType,
-	                                 ComposableMessagingRepository<V, String> obj) {
-		return null;
+	protected ComposableMessagingRepository<V, String> createRepositoryProxy(Class<V> managedType) {
+		return new RedisComposableMessagingRepository<>(getEnvironment(),
+		                                                getDispatcher(),
+		                                                getExecutor(),
+		                                                beanFactory.getBean(RedisClient.class),
+		                                                timeout,
+		                                                managedType);
 	}
 
 }
