@@ -17,7 +17,7 @@ import reactor.data.spring.redis.RedisClientFactoryBean;
 import reactor.function.Consumer;
 import reactor.function.support.Boundary;
 import reactor.function.support.Tap;
-import reactor.spring.config.EnableReactor;
+import reactor.spring.context.config.EnableReactor;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;

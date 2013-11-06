@@ -1,7 +1,7 @@
 package reactor.data.spring.test;
 
 import com.mongodb.Mongo;
-import reactor.spring.config.EnableReactor;
+import reactor.spring.context.config.EnableReactor;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
