@@ -1,6 +1,7 @@
 package reactor.data.spring.test;
 
 import com.mongodb.Mongo;
+import io.spring.reactor.config.EnableReactor;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,7 +22,6 @@ import reactor.event.Event;
 import reactor.function.Consumer;
 import reactor.function.support.Boundary;
 import reactor.function.support.Tap;
-import reactor.spring.context.config.EnableReactor;
 
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
