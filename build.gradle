@@ -16,7 +16,7 @@
 description = 'Reactor Data components'
 
 ext {
-	gradleVersion = '1.7'
+	gradleVersion = '1.10'
 	gradleScriptDir = "${rootProject.projectDir}/gradle"
 
 	// Logging
@@ -30,7 +30,7 @@ ext {
 	sdCouchbaseVersion = '1.0.0.M1'
 
 	// Reactor
-	reactorVersion = '1.0.0.BUILD-SNAPSHOT'
+	reactorVersion = '1.1.0.BUILD-SNAPSHOT'
 
 	// Libraries
 	lettuceVersion = '2.3.3'
