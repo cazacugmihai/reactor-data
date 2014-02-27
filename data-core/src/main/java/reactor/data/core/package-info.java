@@ -1,3 +1,0 @@
-/**
- * Reactor Data integration.
- */
