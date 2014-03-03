@@ -17,6 +17,7 @@
 package reactor.data.core.collection;
 
 import reactor.data.util.DataUtils;
+import reactor.data.util.UnsafeUtils;
 import reactor.util.Assert;
 
 import java.lang.reflect.Field;
@@ -29,6 +30,9 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
+ * Implementation of {@link java.util.List} that internally keeps elements in an {@link
+ * java.util.concurrent.atomic.AtomicReferenceArray}.
+ *
  * @author Jon Brisbin
  */
 public class OrderedAtomicList<T> extends AbstractList<T> {
@@ -55,9 +59,18 @@ public class OrderedAtomicList<T> extends AbstractList<T> {
 	private volatile AtomicReferenceArray<T> values = new AtomicReferenceArray<T>(2);
 	private volatile int                     size   = 0;
 
+	/**
+	 * Create an {@literal OrderedAtomicList} using the default size..
+	 */
 	public OrderedAtomicList() {
 	}
 
+	/**
+	 * Create an {@literal OrderedAtomicList} using the given values.
+	 *
+	 * @param values
+	 * 		the values to start with
+	 */
 	public OrderedAtomicList(Collection<T> values) {
 		int size = DataUtils.nextClosestPowerOf2(values.size());
 		this.values = new AtomicReferenceArray<T>(size);
@@ -65,6 +78,12 @@ public class OrderedAtomicList<T> extends AbstractList<T> {
 		for(T obj : values) { add(obj); }
 	}
 
+	/**
+	 * Create an {@literal OrderedAtomicList} starting at the given size.
+	 *
+	 * @param size
+	 * 		the size of the array to start with
+	 */
 	public OrderedAtomicList(int size) {
 		size = DataUtils.nextClosestPowerOf2(size);
 		this.values = new AtomicReferenceArray<T>(size);
@@ -128,6 +147,11 @@ public class OrderedAtomicList<T> extends AbstractList<T> {
 		return SIZE_UPD.get(this);
 	}
 
+	/**
+	 * Get the underlying value array.
+	 *
+	 * @return the raw value array
+	 */
 	@SuppressWarnings("unchecked")
 	public T[] values() {
 		return (T[])UnsafeUtils.getUnsafe().getObject(OrderedAtomicList.this.values, REF_ARRAY_OFFSET);

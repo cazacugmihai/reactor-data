@@ -26,6 +26,9 @@ import java.io.Serializable;
 import java.util.*;
 
 /**
+ * Implementation of {@link java.util.Map} that internally uses a {@link reactor.data.core.collection.OrderedAtomicList}
+ * to manage the list of key-value entries stored inside this map.
+ *
  * @author Jon Brisbin
  */
 public class ObservableMap<K, V> extends AbstractMap<K, V> implements Serializable {
@@ -38,6 +41,18 @@ public class ObservableMap<K, V> extends AbstractMap<K, V> implements Serializab
 	private final Deferred<Entry<K, V>, ? extends Composable<Entry<K, V>>> deferred;
 	private final Function<K, V>                                           defaultValueProvider;
 
+	/**
+	 * Create an {@literal ObservableMap}, reporting updates to the given {@link reactor.core.Observable} or {@link
+	 * reactor.core.composable.Deferred}, and optionally providing a default value for a given key using the given {@link
+	 * reactor.function.Function}.
+	 *
+	 * @param observable
+	 * 		the {@link reactor.core.Observable} to report updates to. may be {@literal null}
+	 * @param deferred
+	 * 		the {@link reactor.core.composable.Deferred} to report updates to. may be {@literal null}
+	 * @param defaultValueProvider
+	 * 		the {@literal Function} to invoke to provide a default value for a given key
+	 */
 	public ObservableMap(Observable observable,
 	                     Deferred<Entry<K, V>, ? extends Composable<Entry<K, V>>> deferred,
 	                     Function<K, V> defaultValueProvider) {
@@ -46,8 +61,22 @@ public class ObservableMap<K, V> extends AbstractMap<K, V> implements Serializab
 		this.defaultValueProvider = defaultValueProvider;
 	}
 
+	/**
+	 * Get the {@link reactor.core.Observable} being used.
+	 *
+	 * @return the {@link reactor.core.Observable}
+	 */
 	public Observable getObservable() {
 		return observable;
+	}
+
+	/**
+	 * Get the {@link reactor.core.composable.Deferred} being used.
+	 *
+	 * @return the {@link reactor.core.composable.Deferred}
+	 */
+	public Deferred<Entry<K, V>, ? extends Composable<Entry<K, V>>> getDeferred() {
+		return deferred;
 	}
 
 	@Override

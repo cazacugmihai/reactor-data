@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.data.core.collection;
+package reactor.data.util;
 
 import sun.misc.Unsafe;
 

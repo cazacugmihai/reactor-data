@@ -20,6 +20,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
+ * An efficient implementation of {@link java.util.Iterator} that uses an array and an index counter.
+ *
  * @author Jon Brisbin
  */
 public class ArrayIterator<T> implements Iterator<T> {
