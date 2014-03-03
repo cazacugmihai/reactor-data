@@ -16,7 +16,7 @@
 description = 'Reactor Data components'
 
 ext {
-	gradleVersion = '1.9'
+	gradleVersion = '1.10'
 	gradleScriptDir = "${rootProject.projectDir}/gradle"
 
 	// Logging
@@ -24,7 +24,7 @@ ext {
 	logbackVersion = '1.1.1'
 
 	// Spring
-	springVersion = '4.0.0.RELEASE'
+	springVersion = '4.0.2.RELEASE'
 
 	// Reactor
 	reactorVersion = '1.1.0.BUILD-SNAPSHOT'
@@ -80,8 +80,8 @@ allprojects {
 	}
 
 	compileTestJava {
-		sourceCompatibility = 1.8
-		targetCompatibility = 1.8
+		sourceCompatibility = 1.7
+		targetCompatibility = 1.7
 	}
 
 	test {
