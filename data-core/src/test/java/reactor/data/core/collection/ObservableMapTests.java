@@ -41,7 +41,7 @@ public class ObservableMapTests extends AbstractObservableTests {
 		                          deferred,
 		                          null);
 
-		for(int i = 0; i < keys.length; i++) {
+		for (int i = 0; i < keys.length; i++) {
 			final int idx = i;
 			keys[i] = "key[" + idx + "]";
 			values[i] = "value[" + idx + "]";
@@ -112,7 +112,7 @@ public class ObservableMapTests extends AbstractObservableTests {
 		Map<String, String> om = new ObservableMap<>(null, null, null);
 		Map<String, String> hm = new HashMap<>();
 
-		for(int i = 0; i < items; i++) {
+		for (int i = 0; i < items; i++) {
 			keys[i] = "key[" + i + "]";
 			values[i] = "value[" + i + "]";
 
@@ -121,8 +121,8 @@ public class ObservableMapTests extends AbstractObservableTests {
 		}
 		String testType = "ObservableMap iteration horserace";
 		startThroughputTest(testType);
-		while(withinTimeout()) {
-			for(Map.Entry<String, String> entry : om.entrySet()) {
+		while (withinTimeout()) {
+			for (Map.Entry<String, String> entry : om.entrySet()) {
 				assert null != entry.getValue();
 			}
 			counter.addAndGet(items);
@@ -133,8 +133,8 @@ public class ObservableMapTests extends AbstractObservableTests {
 
 		testType = "HashMap iteration horserace";
 		startThroughputTest(testType);
-		while(withinTimeout()) {
-			for(Map.Entry<String, String> entry : hm.entrySet()) {
+		while (withinTimeout()) {
+			for (Map.Entry<String, String> entry : hm.entrySet()) {
 				assert null != entry.getValue();
 			}
 			counter.addAndGet(items);
@@ -152,26 +152,17 @@ public class ObservableMapTests extends AbstractObservableTests {
 		Map<String, String> om = new ObservableMap<>(null, null, null);
 		Map<String, String> hm = new HashMap<>();
 
-		for(int i = 0; i < items; i++) {
+		for (int i = 0; i < items; i++) {
 			keys[i] = "key[" + i + "]";
 			values[i] = "value[" + i + "]";
-
-			om.put(keys[i], values[i]);
 			hm.put(keys[i], values[i]);
 		}
+		om.putAll(hm);
 
 		String testType = "ObservableMap get horserace";
 		startThroughputTest(testType);
-		while(withinTimeout()) {
-			int i = 0;
-			for(String key : keys) {
-				int idx = i++;
-				String s = om.get(key);
-				if(!values[idx].equals(s)) {
-					throw new IllegalArgumentException(key + "=" + s + " should be " + key + "=" + values[idx]);
-				}
-			}
-			counter.addAndGet(items);
+		while (withinTimeout()) {
+			iterateFully(keys, values, om);
 		}
 		stopThroughputTest(testType);
 
@@ -179,19 +170,22 @@ public class ObservableMapTests extends AbstractObservableTests {
 
 		testType = "HashMap get horserace";
 		startThroughputTest(testType);
-		while(withinTimeout()) {
-			int i = 0;
-			for(String key : keys) {
-				int idx = i++;
-				String s = hm.get(key);
-				if(!values[idx].equals(s)) {
-					throw new IllegalArgumentException(key + "=" + s + " should be " + key + "=" + values[idx]);
-				}
-			}
-			counter.addAndGet(items);
+		while (withinTimeout()) {
+			iterateFully(keys, values, hm);
 		}
 		stopThroughputTest(testType);
 	}
 
+	private void iterateFully(String[] keys, String[] values, Map<String, String> m) {
+		int i = 0;
+		for (String key : keys) {
+			int idx = i++;
+			String s = m.get(key);
+			if (!values[idx].equals(s)) {
+				throw new IllegalArgumentException(key + "=" + s + " should be " + key + "=" + values[idx]);
+			}
+		}
+		counter.addAndGet(keys.length);
+	}
 
 }
