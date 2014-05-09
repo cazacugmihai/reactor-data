@@ -2,15 +2,14 @@ package reactor.data.core.collection;
 
 import org.junit.Before;
 import org.junit.Test;
-import reactor.core.composable.Deferred;
-import reactor.core.composable.Stream;
-import reactor.core.composable.spec.Streams;
 import reactor.data.AbstractObservableTests;
 import reactor.event.Event;
 import reactor.event.dispatch.SynchronousDispatcher;
 import reactor.function.Consumer;
 import reactor.function.Function;
 import reactor.function.Predicate;
+import reactor.rx.Stream;
+import reactor.rx.spec.Streams;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +29,7 @@ public class ObservableMapTests extends AbstractObservableTests {
 	private Object[] keys   = new Object[ITEMS];
 	private Object[] values = new Object[ITEMS];
 	private ObservableMap<Object, Object>                                          map;
-	private Deferred<Map.Entry<Object, Object>, Stream<Map.Entry<Object, Object>>> deferred;
+	private Stream<Map.Entry<Object, Object>> deferred;
 
 	@Before
 	public void setup() {
@@ -72,7 +71,7 @@ public class ObservableMapTests extends AbstractObservableTests {
 	public void promiseIsFulfilledWhenValueIsSet() {
 		Consumer<Map.Entry<Object, Object>> consumer = mock(Consumer.class);
 
-		deferred.compose()
+		deferred
 		        .filter(new Predicate<Map.Entry<Object, Object>>() {
 			        @Override
 			        public boolean test(Map.Entry<Object, Object> entry) {

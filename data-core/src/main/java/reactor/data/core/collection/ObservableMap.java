@@ -20,10 +20,9 @@ import com.gs.collections.api.map.MutableMap;
 import com.gs.collections.impl.block.function.checked.CheckedFunction0;
 import com.gs.collections.impl.map.mutable.ConcurrentHashMapUnsafe;
 import reactor.core.Observable;
-import reactor.core.composable.Composable;
-import reactor.core.composable.Deferred;
 import reactor.event.Event;
 import reactor.function.Function;
+import reactor.rx.Composable;
 
 import java.io.Serializable;
 import java.util.AbstractMap;
@@ -157,7 +156,7 @@ public class ObservableMap<K, V> extends AbstractMap<K, V> implements Serializab
 			observable.notify(entry.getKey(), entry);
 		}
 		if (null != deferred) {
-			deferred.accept(entry);
+			deferred.broadcastNext(entry);
 		}
 	}
 
